@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using GardenMerger.Configs;
 using GardenMerger.Tabletop;
 using GardenMerger.UI;
@@ -16,6 +17,8 @@ namespace GardenMerger.Core
         [SerializeField] private TabletopBalanceSO _balanceSO;
         [SerializeField] private List<OrderConfigSO> _orders = new List<OrderConfigSO>();
         [SerializeField] private List<BreedingRecipeSO> _recipes = new List<BreedingRecipeSO>();
+        [Header("Temperature Control")]
+        [SerializeField] private Sprite[] _temperatureLeverSprites;
         [Header("Flower Forms (6, 13, 23, 41, 46)")]
         [SerializeField] private List<Sprite> _flowerFormSprites = new List<Sprite>();
         [SerializeField] private List<Texture2D> _flowerColorMasks = new List<Texture2D>();
@@ -241,6 +244,8 @@ namespace GardenMerger.Core
                     null);
             }
 
+            DragTooltipUI.EnsureInstance();
+
             var notebookObject = FindSceneObject("NotebookModal");
             _notebookUI = notebookObject != null ? notebookObject.GetComponent<FieldNotebookUI>() : null;
             if (_notebookUI != null)
@@ -253,6 +258,8 @@ namespace GardenMerger.Core
                     FindSceneComponent<Text>("RecipesList"),
                     FindSceneComponent<Button>("CloseNBBtn"));
                 _notebookUI.SetJournalData(_orders, _recipes, this);
+
+                SetupJournal();
 
                 if (_hud != null)
                 {
@@ -286,38 +293,152 @@ namespace GardenMerger.Core
 
         private void SetupTemperatureControl()
         {
-            var control = FindSceneObject("TemperatureControl");
-            var renderer = control != null ? control.GetComponent<SpriteRenderer>() : null;
-            var label = FindSceneComponent<TextMesh>("TemperatureModeLabel");
-            if (control == null || renderer == null || label == null || _incubator == null)
+            if (_incubator == null) return;
+
+            // Find lever object (the toggle switch with 3 states)
+            var leverObj = FindSceneObject("TemperatureControl") ??
+                           FindSceneObject("Тумблер_анимация_0") ??
+                           FindSceneObject("Тумблер") ??
+                           FindSceneObject("TemperatureLever");
+
+            // Find indicator object (the lamp next to the lever that changes color)
+            var indicatorObj = FindSceneObject("Indicator") ??
+                               FindSceneObject("Индикатор") ??
+                               FindSceneObject("TemperatureIndicator");
+
+            // If leverObj currently has the round lamp sprite (SimpleSceneSprite20) and a separate tumbler exists, swap them:
+            var tumblerObj = FindSceneObject("Тумблер_анимация_0") ?? FindSceneObject("Тумблер");
+            if (tumblerObj != null && tumblerObj != leverObj)
             {
-                return;
+                if (indicatorObj == null)
+                {
+                    indicatorObj = leverObj;
+                }
+                leverObj = tumblerObj;
             }
 
-            GetOrAddClickReceiver(control).OnClick += () =>
+            var leverRenderer = leverObj != null ? leverObj.GetComponent<SpriteRenderer>() : null;
+            var indicatorRenderer = indicatorObj != null ? indicatorObj.GetComponent<SpriteRenderer>() : null;
+            var label = FindSceneComponent<TextMesh>("TemperatureModeLabel");
+
+            var sprites = GetTemperatureLeverSprites(leverRenderer);
+
+            void UpdateVisuals(TemperatureMode mode)
             {
-                PlaySound(_clickSound);
-                _incubator.CycleTemperature();
-            };
-            _incubator.OnTemperatureChanged += mode =>
-            {
-                _notebookUI?.RecordObservation($"Температурный режим переключён: {GetTemperatureModeName(mode)}; оттенок изменяется без смены формы.");
+                int spriteIndex = 1;
+                Color indColor = Color.white;
+                string labelStr = "НЕЙТРАЛЬНО";
+
                 switch (mode)
                 {
                     case TemperatureMode.Warm:
-                        label.text = "ТЕПЛО";
-                        renderer.color = new Color(0.9f, 0.3f, 0.2f);
+                        spriteIndex = 2;
+                        indColor = new Color(0.95f, 0.35f, 0.2f);
+                        labelStr = "ТЕПЛО";
                         break;
                     case TemperatureMode.Cold:
-                        label.text = "ХОЛОДНО";
-                        renderer.color = new Color(0.35f, 0.7f, 0.95f);
+                        spriteIndex = 0;
+                        indColor = new Color(0.35f, 0.75f, 1.0f);
+                        labelStr = "ХОЛОДНО";
                         break;
                     default:
-                        label.text = "НЕЙТРАЛЬНО";
-                        renderer.color = Color.white;
+                        spriteIndex = 1;
+                        indColor = Color.white;
+                        labelStr = "НЕЙТРАЛЬНО";
                         break;
                 }
+
+                if (label != null)
+                {
+                    label.text = labelStr;
+                }
+
+                if (leverRenderer != null)
+                {
+                    if (sprites != null && spriteIndex < sprites.Length && sprites[spriteIndex] != null)
+                    {
+                        leverRenderer.sprite = sprites[spriteIndex];
+                    }
+                    leverRenderer.color = Color.white;
+                }
+
+                if (indicatorRenderer != null)
+                {
+                    indicatorRenderer.color = indColor;
+                }
+            }
+
+            if (leverObj != null)
+            {
+                var col = leverObj.GetComponent<Collider2D>();
+                if (col == null)
+                {
+                    var box = leverObj.AddComponent<BoxCollider2D>();
+                    box.size = new Vector2(1.2f, 1.2f);
+                    box.isTrigger = true;
+                }
+
+                var receiver = GetOrAddClickReceiver(leverObj);
+                receiver.OnClick = null;
+                receiver.OnClick += () =>
+                {
+                    PlaySound(_clickSound);
+                    _incubator.CycleTemperature();
+                };
+            }
+
+            if (indicatorObj != null && indicatorObj != leverObj)
+            {
+                var indReceiver = GetOrAddClickReceiver(indicatorObj);
+                indReceiver.OnClick = null;
+                indReceiver.OnClick += () =>
+                {
+                    PlaySound(_clickSound);
+                    _incubator.CycleTemperature();
+                };
+            }
+
+            _incubator.OnTemperatureChanged += mode =>
+            {
+                _notebookUI?.RecordObservation($"Температурный режим переключён: {GetTemperatureModeName(mode)}; оттенок изменяется без смены формы.");
+                UpdateVisuals(mode);
             };
+
+            UpdateVisuals(_incubator.CurrentTemperatureMode);
+        }
+
+        private Sprite[] GetTemperatureLeverSprites(SpriteRenderer leverRenderer)
+        {
+            if (_temperatureLeverSprites != null && _temperatureLeverSprites.Length >= 3 && _temperatureLeverSprites[0] != null)
+            {
+                return _temperatureLeverSprites;
+            }
+
+#if UNITY_EDITOR
+            var editorSprites = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/Sprites/Тумблер_анимация.png")
+                .OfType<Sprite>()
+                .OrderBy(s => s.name)
+                .ToArray();
+            if (editorSprites.Length >= 3)
+            {
+                _temperatureLeverSprites = editorSprites;
+                return _temperatureLeverSprites;
+            }
+#endif
+
+            if (leverRenderer != null && leverRenderer.sprite != null && leverRenderer.sprite.texture != null)
+            {
+                var tex = leverRenderer.sprite.texture;
+                _temperatureLeverSprites = new Sprite[3]
+                {
+                    Sprite.Create(tex, new Rect(2f, 0f, 11f, 11f), Vector2.zero, 16f),
+                    Sprite.Create(tex, new Rect(18f, 2f, 11f, 9f), Vector2.zero, 16f),
+                    Sprite.Create(tex, new Rect(34f, 2f, 11f, 11f), Vector2.zero, 16f)
+                };
+                return _temperatureLeverSprites;
+            }
+
+            return null;
         }
 
         private void SetupSproutLever()
@@ -353,6 +474,86 @@ namespace GardenMerger.Core
                     _hud?.ShowBanner("Недостаточно родителей!", "Поместите два цветка в отсеки А и Б.");
                 }
             };
+        }
+
+        private GameObject FindJournalSceneObject()
+        {
+            var journalObject = FindSceneObject("Журнал") ?? FindSceneObject("Journal") ?? FindSceneObject("Книга");
+            if (journalObject != null)
+            {
+                return journalObject;
+            }
+
+            foreach (var sceneTransform in FindObjectsByType<Transform>(FindObjectsInactive.Include))
+            {
+                if (sceneTransform.gameObject.scene != gameObject.scene) continue;
+                if (sceneTransform.GetComponent<RectTransform>() != null) continue;
+
+                string lowerName = sceneTransform.name.ToLowerInvariant();
+                if (lowerName.Contains("журнал") || lowerName.Contains("journal") || lowerName.Contains("книга"))
+                {
+                    return sceneTransform.gameObject;
+                }
+            }
+
+            foreach (var renderer in FindObjectsByType<SpriteRenderer>(FindObjectsInactive.Include))
+            {
+                if (renderer.gameObject.scene != gameObject.scene) continue;
+                if (renderer.sprite != null)
+                {
+                    string spriteName = renderer.sprite.name.ToLowerInvariant();
+                    if (spriteName.Contains("книга") || spriteName.Contains("журнал"))
+                    {
+                        return renderer.gameObject;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private void SetupJournal()
+        {
+            var notebookBtn = FindSceneObject("NotebookBtn");
+            if (notebookBtn != null)
+            {
+                var btn = notebookBtn.GetComponent<Button>();
+                if (btn != null)
+                {
+                    btn.onClick.RemoveAllListeners();
+                    btn.onClick.AddListener(() =>
+                    {
+                        PlaySound(_clickSound);
+                        _notebookUI?.Toggle();
+                    });
+                }
+                notebookBtn.SetActive(false);
+            }
+
+            var journalObject = FindJournalSceneObject();
+            if (journalObject != null)
+            {
+                var col = journalObject.GetComponent<BoxCollider2D>();
+                if (col == null)
+                {
+                    col = journalObject.AddComponent<BoxCollider2D>();
+                }
+                col.offset = new Vector2(0.32f, 0.55f);
+                col.size = new Vector2(1.5f, 2.0f);
+                col.isTrigger = true;
+
+                var receiver = GetOrAddClickReceiver(journalObject);
+                receiver.OnClick = null;
+                receiver.OnClick += () =>
+                {
+                    PlaySound(_clickSound);
+                    _notebookUI?.Toggle();
+                };
+            }
+            else
+            {
+                Debug.LogWarning("[GameManager] Journal object not found in scene!", this);
+            }
         }
 
         private ClickReceiver GetOrAddClickReceiver(GameObject target)

@@ -1,4 +1,5 @@
 using System;
+using GardenMerger.UI;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -27,11 +28,19 @@ namespace GardenMerger.Tabletop
 
         public event Action<DraggableItem> OnItemPickedUp;
         public event Action<DraggableItem> OnItemDropped;
+        public static event Action<DraggableItem> OnAnyItemPickedUp;
+        public static event Action<DraggableItem> OnAnyItemDropped;
+
+        public virtual string GetDragTitle() => string.Empty;
+        public virtual string GetDragSubtitle() => string.Empty;
+        public virtual Color GetDragColor() => Color.white;
+        public virtual float DragTooltipYOffset => 1.3f;
 
         protected virtual void Awake()
         {
             _mainCamera = Camera.main;
             _initialScale = transform.localScale;
+            DragTooltipUI.EnsureInstance();
         }
 
         protected virtual void OnDisable()
@@ -43,6 +52,7 @@ namespace GardenMerger.Tabletop
             if (CurrentlyDraggedItem == this)
             {
                 CurrentlyDraggedItem = null;
+                OnAnyItemDropped?.Invoke(this);
             }
         }
 
@@ -146,6 +156,7 @@ namespace GardenMerger.Tabletop
             }
 
             OnItemPickedUp?.Invoke(this);
+            OnAnyItemPickedUp?.Invoke(this);
         }
 
         private void UpdateDrag(Mouse mouse)
@@ -183,6 +194,7 @@ namespace GardenMerger.Tabletop
             }
 
             OnItemDropped?.Invoke(this);
+            OnAnyItemDropped?.Invoke(this);
         }
 
         private void RaiseRenderersForDragging()

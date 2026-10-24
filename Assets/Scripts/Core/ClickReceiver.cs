@@ -18,11 +18,6 @@ namespace GardenMerger.Core
                 return;
             }
 
-            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
-            {
-                return;
-            }
-
             if (DraggableItem.IsAnyDragging)
             {
                 return;
@@ -40,6 +35,11 @@ namespace GardenMerger.Core
             Vector3 worldPos = camera.ScreenToWorldPoint(screenPosition);
 
             if (!hitCollider.OverlapPoint(worldPos))
+            {
+                return;
+            }
+
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
             {
                 return;
             }

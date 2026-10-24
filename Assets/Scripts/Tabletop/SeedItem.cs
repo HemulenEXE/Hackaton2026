@@ -41,5 +41,43 @@ namespace GardenMerger.Tabletop
         {
             _seedRenderer = renderer;
         }
+
+        public override string GetDragTitle()
+        {
+            var color = ColorRegistry.GetColor(_colorId);
+            string hex = ColorUtility.ToHtmlStringRGB(color.Color);
+            return $"<color=#{hex}><b>Семечко: {color.DisplayName}</b></color> <size=11><color=#94A3B8>({color.BotanicalName})</color></size>";
+        }
+
+        public override string GetDragSubtitle()
+        {
+            var color = ColorRegistry.GetColor(_colorId);
+            string baseInfo = $"Вырастет: {_form.ToDisplayName()} · Ранг {color.Tier}";
+
+            if (GameManager.Instance != null && GameManager.Instance.CurrentOrder != null)
+            {
+                var order = GameManager.Instance.CurrentOrder;
+                if (_colorId == order.TargetColorId)
+                {
+                    if (!order.RequiresFlowerForm || _form == order.TargetFlowerForm)
+                    {
+                        return $"{baseInfo}  <color=#4ADE80><b>★ Подходит для заказа!</b></color>";
+                    }
+                    else
+                    {
+                        return $"{baseInfo}  <color=#FBBF24><b>(Нужна: {order.TargetFlowerForm.ToDisplayName()})</b></color>";
+                    }
+                }
+            }
+
+            return baseInfo;
+        }
+
+        public override Color GetDragColor()
+        {
+            return ColorRegistry.GetColor(_colorId).Color;
+        }
+
+        public override float DragTooltipYOffset => 1.05f;
     }
 }
