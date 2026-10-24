@@ -53,20 +53,21 @@ namespace GardenMerger.Tabletop
                 Debug.LogError($"Flower visuals are not configured for form '{form}'.", this);
                 return;
             }
-            else if (_potRenderer != null)
+
+            _petalsRenderer.color = Color.white;
+            if (_potRenderer != null)
             {
-                // Fallback: если отдельного рендера лепестков нет, окрашиваем пот
-                _potRenderer.color = _colorData.Color;
+                _potRenderer.color = Color.white;
+                _petalsRenderer.sortingLayerID = _potRenderer.sortingLayerID;
+                _petalsRenderer.sortingOrder = _potRenderer.sortingOrder + 1;
             }
-
-
             _petalsRenderer.sharedMaterial = maskMaterial;
             var propertyBlock = new MaterialPropertyBlock();
             _petalsRenderer.GetPropertyBlock(propertyBlock);
             propertyBlock.SetTexture("_MaskTex", colorMask);
             propertyBlock.SetColor("_FlowerColor", _colorData.Color);
             _petalsRenderer.SetPropertyBlock(propertyBlock);
-                    }
+        }
 
         public void SetRenderers(SpriteRenderer pot, SpriteRenderer stem, SpriteRenderer petals, SpriteRenderer pistil)
         {

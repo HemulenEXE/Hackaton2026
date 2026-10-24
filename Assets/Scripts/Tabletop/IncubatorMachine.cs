@@ -36,10 +36,17 @@ namespace GardenMerger.Tabletop
         [SerializeField] private ParticleSystem _steamParticles;
         [SerializeField] private float _sproutDuration = 0.45f;
 
+        [SerializeField] private HumidityMode _humidityMode;
+
+        public HumidityMode Humidity
+        {
+            get => _humidityMode;
+            set => SetHumidity(value); // Перенаправляем любой сет из кода в ваш метод
+        }
+
         private bool _isProcessing;
         private Vector3 _leverInitialRot;
         private TemperatureMode _temperatureMode;
-        private HumidityMode _humidityMode;
 
         public TableSlot SeedSlot => _seedSlot;
         public TableSlot OutputTray => _outputTray;

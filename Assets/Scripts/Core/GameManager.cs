@@ -26,10 +26,21 @@ namespace GardenMerger.Core
         [SerializeField] private SeedItem _seedPrefab;
         [SerializeField] private FlowerPot _flowerPotPrefab;
 
+        [Header("Sound Effects")]
+        [SerializeField] private AudioClip _clickSound;
+        [SerializeField] private AudioClip _itemMoveSound;
+        [SerializeField] private AudioClip _notificationSound;
+        [SerializeField] private AudioClip _failureSound;
+        [SerializeField] private AudioClip _deleteSound;
+        [SerializeField] private AudioClip _mergeSound;
+        [SerializeField] private AudioClip _flowerCreatedSound;
+        [SerializeField] private AudioClip _orderCompletedSound;
+
         private int _currentOrderIndex;
         private int _orderMergeCount;
         private bool _isCampaignWon;
         private Material _flowerMaskMaterial;
+        private AudioSource _audioSource;
 
         // UI & Scene Bindings
         private TabletopHUD _hud;
@@ -65,6 +76,14 @@ namespace GardenMerger.Core
                 return;
             }
             Instance = this;
+
+            _audioSource = GetComponent<AudioSource>();
+            if (_audioSource == null)
+            {
+                _audioSource = gameObject.AddComponent<AudioSource>();
+            }
+            _audioSource.playOnAwake = false;
+            _audioSource.spatialBlend = 0f;
 
             EnsureFlowerMaskMaterial();
 
@@ -189,6 +208,10 @@ namespace GardenMerger.Core
 
             var chuteObject = FindSceneObject("WasteChute");
             _wasteChute = chuteObject != null ? chuteObject.GetComponent<WasteChute>() : null;
+            if (_wasteChute != null)
+            {
+                _wasteChute.OnItemDisposed += _ => PlaySound(_deleteSound);
+            }
             _orderTray = FindSceneComponent<TableSlot>("OrderDeliveryTray");
 
             foreach (var pouch in FindObjectsByType<InfiniteSeedPouch>(FindObjectsInactive.Exclude))
@@ -233,8 +256,14 @@ namespace GardenMerger.Core
 
                 if (_hud != null)
                 {
-                    _hud.OnNotebookClicked += _notebookUI.Toggle;
+                    _hud.OnNotebookClicked += () =>
+                    {
+                        PlaySound(_clickSound);
+                        _notebookUI.Toggle();
+                    };
                 }
+
+                _notebookUI.OnClosed += () => PlaySound(_clickSound);
             }
 
             var victoryObject = FindSceneObject("VictoryModal");
@@ -248,6 +277,8 @@ namespace GardenMerger.Core
                     FindSceneComponent<Button>("SandboxBtn"),
                     FindSceneComponent<Button>("RestartBtn"));
                 _victoryModalUI.OnRestartCampaign += RestartCampaign;
+                _victoryModalUI.OnRestartCampaign += () => PlaySound(_clickSound);
+                _victoryModalUI.OnContinueSandbox += () => PlaySound(_clickSound);
             }
 
             return true;
@@ -263,7 +294,11 @@ namespace GardenMerger.Core
                 return;
             }
 
-            GetOrAddClickReceiver(control).OnClick += () => _incubator.CycleTemperature();
+            GetOrAddClickReceiver(control).OnClick += () =>
+            {
+                PlaySound(_clickSound);
+                _incubator.CycleTemperature();
+            };
             _incubator.OnTemperatureChanged += mode =>
             {
                 switch (mode)
@@ -289,7 +324,14 @@ namespace GardenMerger.Core
             var lever = FindSceneObject("SproutLever");
             if (lever == null || _incubator == null) return;
 
-            GetOrAddClickReceiver(lever).OnClick += () => _incubator.TryPullLever();
+            GetOrAddClickReceiver(lever).OnClick += () =>
+            {
+                PlaySound(_clickSound);
+                if (!_incubator.TryPullLever())
+                {
+                    PlaySound(_failureSound);
+                }
+            };
         }
 
         private void SetupSynthesisButton()
@@ -299,12 +341,14 @@ namespace GardenMerger.Core
 
             GetOrAddClickReceiver(button).OnClick += () =>
             {
+                PlaySound(_clickSound);
                 if (_crossBreeder.CanSynthesize())
                 {
                     _crossBreeder.TryTriggerSynthesis();
                 }
                 else
                 {
+                    PlaySound(_failureSound);
                     _hud?.ShowBanner("Недостаточно родителей!", "Поместите два цветка в отсеки А и Б.");
                 }
             };
@@ -352,6 +396,7 @@ namespace GardenMerger.Core
 
             OnOrderCompleted += (order, isFinal) =>
             {
+                PlaySound(_orderCompletedSound);
                 _notebookUI?.RefreshUI();
                 if (!isFinal && order != null)
                 {
@@ -371,6 +416,7 @@ namespace GardenMerger.Core
                 if (!isNew) return;
 
                 var color = ColorRegistry.GetColor(hybridColor);
+                PlaySound(_notificationSound);
                 _hud?.ShowBanner("Тайна разгадана!", $"В журнал записан рецепт: {color.DisplayName} ({color.BotanicalName})!");
                 _notebookUI?.RefreshUI();
             };
@@ -381,6 +427,7 @@ namespace GardenMerger.Core
                 {
                     var pot = SpawnFlowerPot(colorId, _incubator.OutputTray.transform.position, form);
                     _incubator.OutputTray.AssignItem(pot);
+                    PlaySound(_flowerCreatedSound);
                     _hud?.ShowBanner("Росток распустился!", $"Получен цветок: {ColorRegistry.GetColor(colorId).DisplayName}");
                 };
             }
@@ -389,6 +436,7 @@ namespace GardenMerger.Core
             {
                 _crossBreeder.OnBreedingCompleted += (parentA, parentB, hybridColor, inheritedForm) =>
                 {
+                    PlaySound(_mergeSound);
                     CheckRecipeDiscovery(parentA, parentB, out _, out bool newlyDiscovered);
                     var seed = SpawnSeed(hybridColor, _crossBreeder.OutputDish.transform.position, inheritedForm);
                     _crossBreeder.OutputDish.AssignItem(seed);
@@ -413,24 +461,26 @@ namespace GardenMerger.Core
                 Debug.LogWarning("Seed prefab is not assigned in GameManager! Creating default instance.", this);
                 var seedObject = new GameObject($"Seed_{colorId}");
                 seedObject.transform.position = position;
+                var renderer = seedObject.AddComponent<SpriteRenderer>();
+                renderer.sprite = CreateCircleSprite(ColorRegistry.GetColor(colorId).Color);
+                seedObject.transform.localScale = new Vector3(0.5f, 0.7f, 1f);
                 var collider = seedObject.AddComponent<CircleCollider2D>();
                 collider.radius = 0.35f;
                 seed = seedObject.AddComponent<SeedItem>();
+                seed.SetRenderer(renderer);
             }
 
-            var renderer = seedObject.AddComponent<SpriteRenderer>();
-            renderer.sprite = CreateCircleSprite(ColorRegistry.GetColor(colorId).Color);
-            seedObject.transform.localScale = new Vector3(0.5f, 0.7f, 1f);
-
-            var collider = seedObject.AddComponent<CircleCollider2D>();
-            collider.radius = 0.35f;
-
-            var seed = seedObject.AddComponent<SeedItem>();
-            seed.SetRenderer(renderer);
             seed.Initialize(colorId, form);
             seed.name = $"Seed_{colorId}";
-            //seed.Initialize(colorId);
             seed.SetDeskBounds(_balanceSO != null ? _balanceSO.DeskBounds : new Vector2(8.5f, 4.5f));
+            seed.OnItemPickedUp += _ => PlaySound(_itemMoveSound);
+            seed.OnItemDropped += item =>
+            {
+                if (item.CurrentSlot != null)
+                {
+                    PlaySound(_itemMoveSound);
+                }
+            };
             seed.OnItemDropped += item =>
             {
                 if (_wasteChute != null)
@@ -443,32 +493,18 @@ namespace GardenMerger.Core
 
         public FlowerPot SpawnFlowerPot(string colorId, Vector3 position, FlowerForm form = FlowerForm.Flowers6)
         {
+            FlowerPot pot;
+            if (_flowerPotPrefab != null)
+            {
+                pot = Instantiate(_flowerPotPrefab, position, Quaternion.identity);
+            }
+            else
+            {
+                Debug.LogWarning("Flower pot prefab is not assigned in GameManager! Creating default instance.", this);
+                pot = CreateDefaultFlowerPot(position);
+            }
+
             EnsureFlowerMaskMaterial();
-
-            var potObject = new GameObject($"FlowerPot_{colorId}");
-            potObject.transform.position = position;
-
-            potObject.transform.localScale = new Vector3(1.2f, 1.2f, 1f);
-
-            var potVisual = new GameObject("Pot");
-            potVisual.transform.SetParent(potObject.transform, false);
-            potVisual.transform.localPosition = new Vector3(-0.5f, -0.5f, 0f);
-            var potRenderer = potVisual.AddComponent<SpriteRenderer>();
-            potRenderer.sprite = _potSprite;
-            potRenderer.sortingOrder = 0;
-
-            var petalsObject = new GameObject("Petals");
-            petalsObject.transform.SetParent(potObject.transform, false);
-            petalsObject.transform.localPosition = new Vector3(-0.5f, 0.25f, -0.1f);
-            var petalsRenderer = petalsObject.AddComponent<SpriteRenderer>();
-            petalsRenderer.sortingOrder = 1;
-            petalsObject.transform.localScale = Vector3.one * 0.7f;
-
-            var collider = potObject.AddComponent<BoxCollider2D>();
-            collider.size = new Vector2(0.9f, 1.1f);
-
-            var pot = potObject.AddComponent<FlowerPot>();
-            pot.SetRenderers(potRenderer, null, petalsRenderer, null);
             int formIndex = Mathf.Clamp((int)form, (int)FlowerForm.Flowers6, (int)FlowerForm.Flowers46);
             Sprite flowerSprite = formIndex < _flowerFormSprites.Count ? _flowerFormSprites[formIndex] : null;
             Texture2D colorMask = formIndex < _flowerColorMasks.Count ? _flowerColorMasks[formIndex] : null;
@@ -479,7 +515,16 @@ namespace GardenMerger.Core
                     this);
             }
             pot.Initialize(colorId, (FlowerForm)formIndex, flowerSprite, colorMask, _flowerMaskMaterial);
+            pot.name = $"FlowerPot_{colorId}";
             pot.SetDeskBounds(_balanceSO != null ? _balanceSO.DeskBounds : new Vector2(8.5f, 4.5f));
+            pot.OnItemPickedUp += _ => PlaySound(_itemMoveSound);
+            pot.OnItemDropped += item =>
+            {
+                if (item.CurrentSlot != null)
+                {
+                    PlaySound(_itemMoveSound);
+                }
+            };
             pot.OnItemDropped += item =>
             {
                 if (_wasteChute != null)
@@ -499,10 +544,34 @@ namespace GardenMerger.Core
                 }
                 else
                 {
+                    PlaySound(_failureSound);
                     _hud?.ShowBanner("Не тот сорт!", "Заказчик просит другой цветок.");
                 }
             };
 
+            return pot;
+        }
+
+        private FlowerPot CreateDefaultFlowerPot(Vector3 position)
+        {
+            var potObject = new GameObject("FlowerPot");
+            potObject.transform.position = position;
+            potObject.transform.localScale = new Vector3(1.2f, 1.2f, 1f);
+
+            var potRenderer = potObject.AddComponent<SpriteRenderer>();
+            potRenderer.sprite = _potSprite;
+
+            var petalsObject = new GameObject("Petals");
+            petalsObject.transform.SetParent(potObject.transform, false);
+            petalsObject.transform.localPosition = new Vector3(0f, 0.856f, -0.1f);
+            petalsObject.transform.localScale = Vector3.one * 0.7f;
+            var petalsRenderer = petalsObject.AddComponent<SpriteRenderer>();
+
+            var collider = potObject.AddComponent<BoxCollider2D>();
+            collider.size = new Vector2(0.9f, 1.1f);
+
+            var pot = potObject.AddComponent<FlowerPot>();
+            pot.SetRenderers(potRenderer, null, petalsRenderer, null);
             return pot;
         }
 
@@ -521,6 +590,14 @@ namespace GardenMerger.Core
 
             _flowerMaskMaterial = new Material(_flowerMaskShader);
             return true;
+        }
+
+        private void PlaySound(AudioClip clip)
+        {
+            if (clip != null && _audioSource != null)
+            {
+                _audioSource.PlayOneShot(clip);
+            }
         }
 
         private Sprite CreateCircleSprite(Color color)
@@ -610,6 +687,7 @@ namespace GardenMerger.Core
                 }
                 else
                 {
+                    PlaySound(_notificationSound);
                     AdvanceOrder();
                 }
 
