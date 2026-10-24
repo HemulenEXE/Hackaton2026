@@ -7,10 +7,24 @@ namespace GardenMerger.Tabletop
     {
         [SerializeField] private SpriteRenderer _seedRenderer;
 
+        protected override void Awake()
+        {
+            base.Awake();
+            if (_seedRenderer == null)
+            {
+                _seedRenderer = GetComponent<SpriteRenderer>();
+            }
+        }
+
         public void Initialize(string colorId)
         {
             _colorId = colorId;
             BotanicalColor colorData = ColorRegistry.GetColor(colorId);
+
+            if (_seedRenderer == null)
+            {
+                _seedRenderer = GetComponent<SpriteRenderer>();
+            }
 
             if (_seedRenderer != null)
             {

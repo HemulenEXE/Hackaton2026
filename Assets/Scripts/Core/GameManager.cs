@@ -17,6 +17,10 @@ namespace GardenMerger.Core
         [SerializeField] private List<OrderConfigSO> _orders = new List<OrderConfigSO>();
         [SerializeField] private List<BreedingRecipeSO> _recipes = new List<BreedingRecipeSO>();
 
+        [Header("Prefabs")]
+        [SerializeField] private SeedItem _seedPrefab;
+        [SerializeField] private FlowerPot _flowerPotPrefab;
+
         private int _currentOrderIndex;
         private int _orderMergeCount;
         private bool _isCampaignWon;
@@ -36,6 +40,8 @@ namespace GardenMerger.Core
         public OrderConfigSO CurrentOrder => (_orders != null && _currentOrderIndex < _orders.Count) ? _orders[_currentOrderIndex] : null;
         public List<BreedingRecipeSO> Recipes => _recipes;
         public TabletopBalanceSO Balance => _balanceSO;
+        public SeedItem SeedPrefab => _seedPrefab;
+        public FlowerPot FlowerPotPrefab => _flowerPotPrefab;
         public TabletopHUD HUD => _hud;
         public IncubatorMachine Incubator => _incubator;
         public CrossBreederMachine CrossBreeder => _crossBreeder;
@@ -376,18 +382,22 @@ namespace GardenMerger.Core
 
         public SeedItem SpawnSeed(string colorId, Vector3 position)
         {
-            var seedObject = new GameObject($"Seed_{colorId}");
-            seedObject.transform.position = position;
+            SeedItem seed;
+            if (_seedPrefab != null)
+            {
+                seed = Instantiate(_seedPrefab, position, Quaternion.identity);
+            }
+            else
+            {
+                Debug.LogWarning("Seed prefab is not assigned in GameManager! Creating default instance.", this);
+                var seedObject = new GameObject($"Seed_{colorId}");
+                seedObject.transform.position = position;
+                var collider = seedObject.AddComponent<CircleCollider2D>();
+                collider.radius = 0.35f;
+                seed = seedObject.AddComponent<SeedItem>();
+            }
 
-            var renderer = seedObject.AddComponent<SpriteRenderer>();
-            renderer.sprite = CreateCircleSprite(ColorRegistry.GetColor(colorId).Color);
-            seedObject.transform.localScale = new Vector3(0.5f, 0.7f, 1f);
-
-            var collider = seedObject.AddComponent<CircleCollider2D>();
-            collider.radius = 0.35f;
-
-            var seed = seedObject.AddComponent<SeedItem>();
-            seed.SetRenderer(renderer);
+            seed.name = $"Seed_{colorId}";
             seed.Initialize(colorId);
             seed.SetDeskBounds(_balanceSO != null ? _balanceSO.DeskBounds : new Vector2(8.5f, 4.5f));
             seed.OnItemDropped += item =>
@@ -402,25 +412,22 @@ namespace GardenMerger.Core
 
         public FlowerPot SpawnFlowerPot(string colorId, Vector3 position)
         {
-            var potObject = new GameObject($"FlowerPot_{colorId}");
-            potObject.transform.position = position;
+            FlowerPot pot;
+            if (_flowerPotPrefab != null)
+            {
+                pot = Instantiate(_flowerPotPrefab, position, Quaternion.identity);
+            }
+            else
+            {
+                Debug.LogWarning("Flower pot prefab is not assigned in GameManager! Creating default instance.", this);
+                var potObject = new GameObject($"FlowerPot_{colorId}");
+                potObject.transform.position = position;
+                var collider = potObject.AddComponent<BoxCollider2D>();
+                collider.size = new Vector2(0.9f, 1.1f);
+                pot = potObject.AddComponent<FlowerPot>();
+            }
 
-            var potRenderer = potObject.AddComponent<SpriteRenderer>();
-            potRenderer.sprite = CreateQuadSprite(new Color(0.75f, 0.35f, 0.18f));
-            potObject.transform.localScale = new Vector3(1.2f, 1.2f, 1f);
-
-            var petalsObject = new GameObject("Petals");
-            petalsObject.transform.SetParent(potObject.transform);
-            petalsObject.transform.localPosition = new Vector3(0f, 0.35f, -0.1f);
-            var petalsRenderer = petalsObject.AddComponent<SpriteRenderer>();
-            petalsRenderer.sprite = CreateCircleSprite(ColorRegistry.GetColor(colorId).Color);
-            petalsObject.transform.localScale = Vector3.one * 0.7f;
-
-            var collider = potObject.AddComponent<BoxCollider2D>();
-            collider.size = new Vector2(0.9f, 1.1f);
-
-            var pot = potObject.AddComponent<FlowerPot>();
-            pot.SetRenderers(potRenderer, null, petalsRenderer, null);
+            pot.name = $"FlowerPot_{colorId}";
             pot.Initialize(colorId);
             pot.SetDeskBounds(_balanceSO != null ? _balanceSO.DeskBounds : new Vector2(8.5f, 4.5f));
             pot.OnItemDropped += item =>
@@ -447,42 +454,6 @@ namespace GardenMerger.Core
             };
 
             return pot;
-        }
-
-        private Sprite CreateCircleSprite(Color color)
-        {
-            const int size = 64;
-            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
-            float radius = size / 2f;
-            var center = new Vector2(radius, radius);
-
-            for (int y = 0; y < size; y++)
-            {
-                for (int x = 0; x < size; x++)
-                {
-                    texture.SetPixel(x, y, Vector2.Distance(new Vector2(x, y), center) <= radius ? color : Color.clear);
-                }
-            }
-
-            texture.Apply();
-            return Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
-        }
-
-        private Sprite CreateQuadSprite(Color color)
-        {
-            const int size = 32;
-            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
-
-            for (int y = 0; y < size; y++)
-            {
-                for (int x = 0; x < size; x++)
-                {
-                    texture.SetPixel(x, y, color);
-                }
-            }
-
-            texture.Apply();
-            return Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
         }
 
         public void IncrementMergeCount()
