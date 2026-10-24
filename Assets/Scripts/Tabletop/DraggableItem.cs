@@ -15,6 +15,8 @@ namespace GardenMerger.Tabletop
         protected Vector3 _initialScale;
         protected Camera _mainCamera;
         protected Vector2 _deskBounds = new Vector2(8.0f, 4.2f);
+        private SpriteRenderer[] _draggedRenderers;
+        private int[] _originalSortingOrders;
 
         public string ColorId => _colorId;
         public TableSlot CurrentSlot => _currentSlot;
@@ -85,6 +87,7 @@ namespace GardenMerger.Tabletop
             Vector3 mouseWorldPos = GetMouseWorldPosition(mouse.position.ReadValue());
             _dragOffset = transform.position - mouseWorldPos;
             transform.localScale = _initialScale * 1.15f;
+            RaiseRenderersForDragging();
 
             if (_currentSlot != null)
             {
@@ -112,6 +115,7 @@ namespace GardenMerger.Tabletop
         {
             _isDragging = false;
             transform.localScale = _initialScale;
+            RestoreRendererSortingOrders();
             Vector3 pos = transform.position;
             pos.z = 0f;
             transform.position = pos;
@@ -124,6 +128,43 @@ namespace GardenMerger.Tabletop
             }
 
             OnItemDropped?.Invoke(this);
+        }
+
+        private void RaiseRenderersForDragging()
+        {
+            _draggedRenderers = GetComponentsInChildren<SpriteRenderer>(true);
+            _originalSortingOrders = new int[_draggedRenderers.Length];
+
+            int dragSortingOrder = 0;
+            for (int i = 0; i < _draggedRenderers.Length; i++)
+            {
+                _originalSortingOrders[i] = _draggedRenderers[i].sortingOrder;
+                dragSortingOrder = Mathf.Max(dragSortingOrder, _originalSortingOrders[i] + 2);
+            }
+
+            for (int i = 0; i < _draggedRenderers.Length; i++)
+            {
+                _draggedRenderers[i].sortingOrder = dragSortingOrder;
+            }
+        }
+
+        private void RestoreRendererSortingOrders()
+        {
+            if (_draggedRenderers == null || _originalSortingOrders == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _draggedRenderers.Length; i++)
+            {
+                if (_draggedRenderers[i] != null)
+                {
+                    _draggedRenderers[i].sortingOrder = _originalSortingOrders[i];
+                }
+            }
+
+            _draggedRenderers = null;
+            _originalSortingOrders = null;
         }
 
         protected TableSlot FindNearestValidSlot()

@@ -40,6 +40,11 @@ namespace GardenMerger.Core
 
         public void Initialize(List<OrderConfigSO> orders, List<BreedingRecipeSO> recipes)
         {
+            if (Instance == null)
+            {
+                Instance = this;
+            }
+
             _orders = orders;
             _recipes = recipes;
             _currentOrderIndex = 0;
@@ -64,7 +69,9 @@ namespace GardenMerger.Core
             {
                 foreach (var recipe in _recipes)
                 {
-                    if (recipe.Matches(parentA, parentB))
+                    bool isGreyDiscovery = hybridColor == FlowerColor.Grey.ToString() &&
+                                           recipe.ResultColorId == FlowerColor.Grey.ToString();
+                    if (recipe.Matches(parentA, parentB) || isGreyDiscovery)
                     {
                         if (!recipe.IsDiscovered)
                         {

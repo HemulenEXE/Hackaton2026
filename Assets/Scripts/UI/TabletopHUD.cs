@@ -12,6 +12,7 @@ namespace GardenMerger.UI
         [Header("Order Card")]
         [SerializeField] private Text _orderTitleText;
         [SerializeField] private Text _clientRoleText;
+        [SerializeField] private Text _targetColorText;
         [SerializeField] private Text _poeticHintText;
         [SerializeField] private Text _mergeCounterText;
         [SerializeField] private Image _targetColorSwatch;
@@ -36,11 +37,12 @@ namespace GardenMerger.UI
             if (_tunerButton != null) _tunerButton.onClick.AddListener(() => OnTunerClicked?.Invoke());
         }
 
-        public void Setup(Text title, Text role, Text hint, Text counter, Image swatch,
+        public void Setup(Text title, Text role, Text targetColor, Text hint, Text counter, Image swatch,
                           GameObject banner, Text bTitle, Text bSub, Button nbBtn, Button tunerBtn)
         {
             _orderTitleText = title;
             _clientRoleText = role;
+            _targetColorText = targetColor;
             _poeticHintText = hint;
             _mergeCounterText = counter;
             _targetColorSwatch = swatch;
@@ -71,6 +73,12 @@ namespace GardenMerger.UI
             if (_clientRoleText != null) _clientRoleText.text = order.ClientRole;
             if (_poeticHintText != null) _poeticHintText.text = order.PoeticHint;
 
+            BotanicalColor targetColor = ColorRegistry.GetColor(order.TargetColorId);
+            if (_targetColorText != null)
+            {
+                _targetColorText.text = $"Цель: {targetColor.DisplayName} — {targetColor.BotanicalName}";
+            }
+
             if (_mergeCounterText != null)
             {
                 string colorHex = currentMerges <= order.ParMerges ? "#238636" : "#B22222";
@@ -79,7 +87,7 @@ namespace GardenMerger.UI
 
             if (_targetColorSwatch != null)
             {
-                _targetColorSwatch.color = ColorRegistry.GetColor(order.TargetColorId).Color;
+                _targetColorSwatch.color = targetColor.Color;
             }
         }
 
