@@ -159,11 +159,12 @@ namespace GardenMerger.UI
 
         private void AppendRecipeEntry(System.Text.StringBuilder entries, BreedingRecipeSO recipe)
         {
+            var parentA = ColorRegistry.GetColor(recipe.ParentAColorId);
+            var parentB = ColorRegistry.GetColor(recipe.ParentBColorId);
+            var result = ColorRegistry.GetColor(recipe.ResultColorId);
+
             if (recipe.IsDiscovered)
             {
-                var parentA = ColorRegistry.GetColor(recipe.ParentAColorId);
-                var parentB = ColorRegistry.GetColor(recipe.ParentBColorId);
-                var result = ColorRegistry.GetColor(recipe.ResultColorId);
                 entries.Append("<color=#28583A>")
                     .Append(parentA.DisplayName).Append(" + ").Append(parentB.DisplayName)
                     .Append(" → ").Append(result.DisplayName)
@@ -172,7 +173,7 @@ namespace GardenMerger.UI
             }
             else
             {
-                entries.Append("<color=#706A5E>??? + ??? → ???</color>\n");
+                entries.Append($"<color=#706A5E>??? + ??? → {result.DisplayName} ({result.BotanicalName})</color>\n");
             }
         }
 
