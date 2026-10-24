@@ -1,9 +1,17 @@
 using System;
 using System.Collections;
+using GardenMerger.Core;
 using UnityEngine;
 
 namespace GardenMerger.Tabletop
 {
+    public enum TemperatureMode
+    {
+        Neutral,
+        Warm,
+        Cold
+    }
+
     public class IncubatorMachine : MonoBehaviour
     {
         [SerializeField] private TableSlot _seedSlot;
@@ -14,12 +22,15 @@ namespace GardenMerger.Tabletop
 
         private bool _isProcessing;
         private Vector3 _leverInitialRot;
+        private TemperatureMode _temperatureMode;
 
         public TableSlot SeedSlot => _seedSlot;
         public TableSlot OutputTray => _outputTray;
         public bool IsProcessing => _isProcessing;
+        public TemperatureMode CurrentTemperatureMode => _temperatureMode;
 
         public event Action<string> OnFlowerSprouted;
+        public event Action<TemperatureMode> OnTemperatureChanged;
 
         private void Awake()
         {
@@ -57,8 +68,27 @@ namespace GardenMerger.Tabletop
                 return false;
             }
 
-            StartCoroutine(ProcessSprout());
+            StartCoroutine(ProcessSprout(_temperatureMode));
             return true;
+        }
+
+        public TemperatureMode CycleTemperature()
+        {
+            switch (_temperatureMode)
+            {
+                case TemperatureMode.Neutral:
+                    _temperatureMode = TemperatureMode.Warm;
+                    break;
+                case TemperatureMode.Warm:
+                    _temperatureMode = TemperatureMode.Cold;
+                    break;
+                default:
+                    _temperatureMode = TemperatureMode.Neutral;
+                    break;
+            }
+
+            OnTemperatureChanged?.Invoke(_temperatureMode);
+            return _temperatureMode;
         }
 
         private IEnumerator AnimateLever()
@@ -90,7 +120,7 @@ namespace GardenMerger.Tabletop
             _leverTransform.localEulerAngles = _leverInitialRot;
         }
 
-        private IEnumerator ProcessSprout()
+        private IEnumerator ProcessSprout(TemperatureMode temperatureMode)
         {
             _isProcessing = true;
 
@@ -104,6 +134,22 @@ namespace GardenMerger.Tabletop
             if (_seedSlot.CurrentItem is SeedItem seed)
             {
                 string colorId = seed.ColorId;
+                if (ColorRegistry.TryParseColor(colorId, out FlowerColor seedColor))
+                {
+                    switch (temperatureMode)
+                    {
+                        case TemperatureMode.Warm:
+                            colorId = ColorRegistry.Warm(seedColor).ToString();
+                            break;
+                        case TemperatureMode.Cold:
+                            colorId = ColorRegistry.Cool(seedColor).ToString();
+                            break;
+                    }
+                }
+                else
+                {
+                    Debug.LogError($"Unknown seed color '{colorId}' in incubator.", seed);
+                }
 
                 // Remove seed from slot and destroy
                 _seedSlot.ClearItem();

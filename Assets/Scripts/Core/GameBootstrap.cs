@@ -67,38 +67,61 @@ namespace GardenMerger.Core
 
             if (_ordersSO == null || _ordersSO.Count == 0)
             {
-                _ordersSO = new List<OrderConfigSO>
-                {
-                    CreateOrder(1, "Леди Элеонора", "Придворная дама",
-                        "«Для бального платья мне нужен цветок с нежным румянцем — словно чистое белое молоко озарилось первым алым лучом зари...»", "Pink", 1),
-                    CreateOrder(2, "Аптекарь Грим", "Мастер трав",
-                        "«Для сонной настойки нужен лепесток цвета морозного рассвета — когда пушистый снег тает в бездонной синеве чистого неба.»", "SkyBlue", 1),
-                    CreateOrder(3, "Профессор Вэнс", "Глава Академии",
-                        "«Королевской кафедре требуется цветок глубоких сумерек — тот миг, когда пламенное солнце заката тонет в прохладном синем океане ночи.»", "Purple", 1),
-                    CreateOrder(4, "Герцогиня Женевьева", "Покровительница искусств",
-                        "«Я грежу о цветке безмятежности. Предание шепчет: его загадочный оттенок рождается от союза девичьего румянца и утренней лазури...»", "Lavender", 2),
-                    CreateOrder(5, "Архиботаник Торн", "Главный алхимик",
-                        "«Высшая тайна ордена: выведите пламенный имперский сорт. В нем величие бархатной сумеречной мантии должно слиться с первозданной алой страстью.»", "Magenta", 2)
-                };
+                _ordersSO = CreateDefaultOrders();
             }
 
             if (_recipesSO == null || _recipesSO.Count == 0)
             {
-                _recipesSO = new List<BreedingRecipeSO>
-                {
-                    CreateRecipe("Red", "White", "Pink", 1),
-                    CreateRecipe("Blue", "Red", "Purple", 1),
-                    CreateRecipe("Blue", "White", "SkyBlue", 1),
-                    CreateRecipe("Pink", "SkyBlue", "Lavender", 2),
-                    CreateRecipe("Purple", "Red", "Magenta", 2),
-                    CreateRecipe("Purple", "White", "Lilac", 2),
-                    CreateRecipe("Pink", "Red", "Crimson", 2)
-                };
+                _recipesSO = CreateDefaultRecipes();
             }
 
             var gmGo = new GameObject("GameManager");
             var gm = gmGo.AddComponent<GameManager>();
             gm.Initialize(_ordersSO, _recipesSO);
+        }
+
+        private List<OrderConfigSO> CreateDefaultOrders()
+        {
+            return new List<OrderConfigSO>
+            {
+                CreateOrder(1, "Первый образец", "Хранитель лаборатории",
+                    "Вырастите белую лилию в нейтральном режиме.", "White", 0),
+                CreateOrder(2, "Тёплый опыт", "Садовник-исследователь",
+                    "Утеплите белое семя и получите красный мак.", "Red", 0),
+                CreateOrder(3, "Холодный опыт", "Аптекарь",
+                    "Охладите белое семя и получите синий цветок.", "Blue", 0),
+                CreateOrder(4, "Пастельный гибрид", "Профессор ботаники",
+                    "Скрестите розовую камелию с голубой гортензией и получите лаванду.", "Lavender", 3),
+                CreateOrder(5, "Пепельный сорняк", "Архиботаник",
+                    "Получите пепельный цветок в результате диссонирующего скрещивания.", "Grey", 2)
+            };
+        }
+
+        private List<BreedingRecipeSO> CreateDefaultRecipes()
+        {
+            var recipes = new List<BreedingRecipeSO>();
+            var colors = (FlowerColor[])System.Enum.GetValues(typeof(FlowerColor));
+
+            for (int i = 0; i < colors.Length; i++)
+            {
+                for (int j = i + 1; j < colors.Length; j++)
+                {
+                    FlowerColor result = ColorRegistry.Merge(colors[i], colors[j]);
+                    if (result == FlowerColor.Grey)
+                    {
+                        continue;
+                    }
+
+                    recipes.Add(CreateRecipe(
+                        colors[i].ToString(),
+                        colors[j].ToString(),
+                        result.ToString(),
+                        ColorRegistry.GetInfo(result).Tier));
+                }
+            }
+
+            recipes.Add(CreateRecipe("Red", "SkyBlue", "Grey", 4));
+            return recipes;
         }
 
         private OrderConfigSO CreateOrder(int id, string title, string role, string hint, string targetColor, int par)
@@ -198,7 +221,7 @@ namespace GardenMerger.Core
             }
         }
 
-        private void CreateWorldLabel(string name, string content, Vector3 position)
+        private TextMesh CreateWorldLabel(string name, string content, Vector3 position)
         {
             var label = new GameObject(name);
             label.transform.position = position;
@@ -214,6 +237,7 @@ namespace GardenMerger.Core
 
             var renderer = label.GetComponent<MeshRenderer>();
             renderer.sortingOrder = 2;
+            return text;
         }
 
         private void CreateApparatuses()
@@ -230,19 +254,58 @@ namespace GardenMerger.Core
             var seedSlotGo = CreateSlotObject("SeedCrucible", incGo.transform, new Vector3(-0.65f, 0.75f, -0.1f), SlotType.IncubatorSeedInput, 0.9f);
             var outputTrayGo = CreateSlotObject("OutputTray", incGo.transform, new Vector3(-0.65f, -0.85f, -0.1f), SlotType.IncubatorFlowerOutput, 1.1f);
 
-            var leverGo = new GameObject("LeverKnob");
+            var temperatureControlGo = new GameObject("TemperatureControl");
+            temperatureControlGo.transform.SetParent(incGo.transform);
+            temperatureControlGo.transform.localPosition = new Vector3(0.9f, 0.75f, -0.2f);
+            var temperatureControlCollider = temperatureControlGo.AddComponent<CircleCollider2D>();
+            temperatureControlCollider.radius = 0.35f;
+            var temperatureControlRenderer = temperatureControlGo.AddComponent<SpriteRenderer>();
+            temperatureControlRenderer.sprite = CreateCircleSprite(Color.white);
+            temperatureControlGo.transform.localScale = new Vector3(0.6f, 0.6f, 1f);
+
+            var temperatureLabel = CreateWorldLabel(
+                "TemperatureModeLabel",
+                "НЕЙТРАЛЬНО",
+                incGo.transform.position + new Vector3(0.9f, 1.15f, -0.2f));
+
+            var leverGo = new GameObject("SproutLever");
             leverGo.transform.SetParent(incGo.transform);
-            leverGo.transform.localPosition = new Vector3(0.9f, 0.75f, -0.2f);
+            leverGo.transform.localPosition = new Vector3(0.9f, -0.85f, -0.2f);
             var leverCol = leverGo.AddComponent<CircleCollider2D>();
             leverCol.radius = 0.35f;
             var leverSr = leverGo.AddComponent<SpriteRenderer>();
             leverSr.sprite = CreateCircleSprite(new Color(0.75f, 0.12f, 0.15f));
             leverGo.transform.localScale = new Vector3(0.6f, 0.6f, 1f);
 
+            CreateWorldLabel(
+                "SproutLeverLabel",
+                "ВЫРАСТИТЬ",
+                incGo.transform.position + new Vector3(0.9f, -1.35f, -0.2f));
+
             var incComp = incGo.AddComponent<IncubatorMachine>();
             incComp.Setup(seedSlotGo.GetComponent<TableSlot>(), outputTrayGo.GetComponent<TableSlot>(), leverGo.transform, null, _balanceSO.SproutDurationSec);
             _incubator = incComp;
 
+            incComp.OnTemperatureChanged += mode =>
+            {
+                switch (mode)
+                {
+                    case TemperatureMode.Warm:
+                        temperatureLabel.text = "ТЕПЛО";
+                        temperatureControlRenderer.color = new Color(0.9f, 0.3f, 0.2f);
+                        break;
+                    case TemperatureMode.Cold:
+                        temperatureLabel.text = "ХОЛОДНО";
+                        temperatureControlRenderer.color = new Color(0.35f, 0.7f, 0.95f);
+                        break;
+                    default:
+                        temperatureLabel.text = "НЕЙТРАЛЬНО";
+                        temperatureControlRenderer.color = Color.white;
+                        break;
+                }
+            };
+
+            temperatureControlGo.AddComponent<ClickReceiver>().OnClick += () => _incubator.CycleTemperature();
             leverGo.AddComponent<ClickReceiver>().OnClick += () => _incubator.TryPullLever();
 
             // 2. Pollinator artwork replaces the Cross-Breeder body.
@@ -353,8 +416,8 @@ namespace GardenMerger.Core
 
         private void CreateSeedPouches()
         {
-            string[] pouchColors = { "Red", "Blue", "White" };
-            float[] xOffsets = { -5.8f, -4.2f, -2.6f };
+            string[] pouchColors = { "White" };
+            float[] xOffsets = { -4.2f };
 
             for (int i = 0; i < pouchColors.Length; i++)
             {
@@ -424,11 +487,12 @@ namespace GardenMerger.Core
             _hud = hudGo.AddComponent<TabletopHUD>();
 
             // Setup basic Text elements for Order
-            var orderPanel = CreateUIPanel("OrderPanel", canvasGo.transform, new Vector2(0, 420), new Vector2(600, 150));
-            var titleText = CreateUIText("OrderTitle", orderPanel.transform, new Vector2(0, 40), "Заказ #1", 20, Color.black);
-            var roleText = CreateUIText("ClientRole", orderPanel.transform, new Vector2(0, 18), "Придворная дама", 14, new Color(0.3f, 0.3f, 0.3f));
-            var hintText = CreateUIText("PoeticHint", orderPanel.transform, new Vector2(0, -15), "...", 14, Color.black, new Vector2(540, 50));
-            var counterText = CreateUIText("MergeCounter", orderPanel.transform, new Vector2(0, -50), "Скрещиваний: 0 / Пар: 1", 14, Color.black);
+            var orderPanel = CreateUIPanel("OrderPanel", canvasGo.transform, new Vector2(0, 420), new Vector2(600, 190));
+            var titleText = CreateUIText("OrderTitle", orderPanel.transform, new Vector2(0, 65), "Заказ #1", 20, Color.black);
+            var roleText = CreateUIText("ClientRole", orderPanel.transform, new Vector2(0, 40), "Хранитель лаборатории", 14, new Color(0.3f, 0.3f, 0.3f));
+            var targetColorText = CreateUIText("TargetColor", orderPanel.transform, new Vector2(0, 15), "Цель: Белый", 14, new Color(0.34f, 0.25f, 0.15f));
+            var hintText = CreateUIText("PoeticHint", orderPanel.transform, new Vector2(0, -20), "...", 14, Color.black, new Vector2(540, 50));
+            var counterText = CreateUIText("MergeCounter", orderPanel.transform, new Vector2(0, -70), "Скрещиваний: 0 / Пар: 0", 14, Color.black);
 
             // Banner Toast
             var bannerGo = CreateUIPanel("BannerToast", canvasGo.transform, new Vector2(0, 320), new Vector2(500, 70));
@@ -440,7 +504,7 @@ namespace GardenMerger.Core
             var nbBtnGo = CreateUIButton("NotebookBtn", canvasGo.transform, new Vector2(-400, 480), "📖 Полевой Журнал");
             var nbBtn = nbBtnGo.GetComponent<Button>();
 
-            _hud.Setup(titleText, roleText, hintText, counterText, null, bannerGo, bTitle, bSub, nbBtn, null);
+            _hud.Setup(titleText, roleText, targetColorText, hintText, counterText, null, bannerGo, bTitle, bSub, nbBtn, null);
 
             // Notebook Modal
             var nbModalGo = CreateUIPanel("NotebookModal", canvasGo.transform, Vector2.zero, new Vector2(1100, 700));
@@ -450,18 +514,14 @@ namespace GardenMerger.Core
             var ordersList = CreateUIText("OrdersList", nbModalGo.transform, new Vector2(-260, 10), "", 14, new Color(0.16f, 0.15f, 0.13f), new Vector2(490, 490));
             ordersList.alignment = TextAnchor.UpperLeft;
             ordersList.verticalOverflow = VerticalWrapMode.Overflow;
-            var t1Count = CreateUIText("T1Count", nbModalGo.transform, new Vector2(280, 220), "Открыто формул: 0 из 3", 14, Color.black);
-            var t1List = CreateUIText("T1List", nbModalGo.transform, new Vector2(280, 130), "", 14, new Color(0.16f, 0.15f, 0.13f), new Vector2(490, 145));
-            t1List.alignment = TextAnchor.UpperLeft;
-            t1List.verticalOverflow = VerticalWrapMode.Overflow;
-            var t2Count = CreateUIText("T2Count", nbModalGo.transform, new Vector2(280, -55), "Открыто формул: 0 из 4", 14, Color.black);
-            var t2List = CreateUIText("T2List", nbModalGo.transform, new Vector2(280, -185), "", 14, new Color(0.16f, 0.15f, 0.13f), new Vector2(490, 220));
-            t2List.alignment = TextAnchor.UpperLeft;
-            t2List.verticalOverflow = VerticalWrapMode.Overflow;
+            var recipesCounter = CreateUIText("RecipesCounter", nbModalGo.transform, new Vector2(280, 220), "Открыто формул: 0", 14, Color.black);
+            var recipesList = CreateUIText("RecipesList", nbModalGo.transform, new Vector2(280, -10), "", 12, new Color(0.16f, 0.15f, 0.13f), new Vector2(490, 460));
+            recipesList.alignment = TextAnchor.UpperLeft;
+            recipesList.verticalOverflow = VerticalWrapMode.Overflow;
             var closeBtnGo = CreateUIButton("CloseNBBtn", nbModalGo.transform, new Vector2(450, 310), "✕");
 
             _notebookUI = nbModalGo.AddComponent<FieldNotebookUI>();
-            _notebookUI.Setup(nbModalGo, nbTitle, ordersList, t1Count, t1List, t2Count, t2List, closeBtnGo.GetComponent<Button>());
+            _notebookUI.Setup(nbModalGo, nbTitle, ordersList, recipesCounter, recipesList, closeBtnGo.GetComponent<Button>());
             _notebookUI.SetJournalData(_ordersSO, _recipesSO, GameManager.Instance);
             nbModalGo.SetActive(false);
 
@@ -522,6 +582,7 @@ namespace GardenMerger.Core
 
             gm.OnOrderUpdated += (order, count) => _hud.UpdateOrder(order, count);
             gm.OnOrderUpdated += (order, count) => _notebookUI.RefreshUI();
+            _hud.UpdateOrder(gm.CurrentOrder, gm.OrderMergeCount);
 
             gm.OnOrderCompleted += (order, isFinal) =>
             {
