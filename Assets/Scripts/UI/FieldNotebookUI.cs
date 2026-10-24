@@ -257,7 +257,7 @@ namespace GardenMerger.UI
 
             text.fontSize = fontSize;
             text.color = color;
-            text.lineSpacing = 1.15f;
+            text.lineSpacing = 1.2f;
             text.horizontalOverflow = HorizontalWrapMode.Wrap;
             text.verticalOverflow = VerticalWrapMode.Overflow;
             text.supportRichText = true;
