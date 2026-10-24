@@ -8,6 +8,9 @@ namespace GardenMerger.Tabletop
     [RequireComponent(typeof(Collider2D))]
     public abstract class DraggableItem : MonoBehaviour
     {
+        public static DraggableItem CurrentlyDraggedItem { get; private set; }
+        public static bool IsAnyDragging => CurrentlyDraggedItem != null;
+
         [SerializeField] protected string _colorId;
         protected TableSlot _currentSlot;
         protected bool _isDragging;
@@ -31,6 +34,18 @@ namespace GardenMerger.Tabletop
             _initialScale = transform.localScale;
         }
 
+        protected virtual void OnDisable()
+        {
+            if (_isDragging)
+            {
+                EndDrag();
+            }
+            if (CurrentlyDraggedItem == this)
+            {
+                CurrentlyDraggedItem = null;
+            }
+        }
+
         public void SetCurrentSlot(TableSlot slot)
         {
             _currentSlot = slot;
@@ -39,6 +54,37 @@ namespace GardenMerger.Tabletop
         public void SetDeskBounds(Vector2 bounds)
         {
             _deskBounds = bounds;
+        }
+
+        public static DraggableItem GetTopDraggableUnderPoint(Vector2 worldPoint)
+        {
+            Collider2D[] hits = Physics2D.OverlapPointAll(worldPoint);
+            DraggableItem topItem = null;
+            int highestOrder = int.MinValue;
+            float highestZ = float.MinValue;
+
+            for (int i = 0; i < hits.Length; i++)
+            {
+                var col = hits[i];
+                if (col == null) continue;
+
+                var item = col.GetComponentInParent<DraggableItem>();
+                if (item != null && item.enabled && item.gameObject.activeInHierarchy)
+                {
+                    var renderer = item.GetComponentInChildren<SpriteRenderer>();
+                    int order = renderer != null ? renderer.sortingOrder : 0;
+                    float zPriority = -item.transform.position.z;
+
+                    if (topItem == null || order > highestOrder || (order == highestOrder && zPriority > highestZ))
+                    {
+                        topItem = item;
+                        highestOrder = order;
+                        highestZ = zPriority;
+                    }
+                }
+            }
+
+            return topItem;
         }
 
         protected virtual void Update()
@@ -51,14 +97,15 @@ namespace GardenMerger.Tabletop
 
             if (!_isDragging)
             {
-                if (!mouse.leftButton.wasPressedThisFrame ||
+                if (IsAnyDragging || !mouse.leftButton.wasPressedThisFrame ||
                     (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()))
                 {
                     return;
                 }
 
-                var itemCollider = GetComponent<Collider2D>();
-                if (itemCollider == null || !itemCollider.OverlapPoint(GetMouseWorldPosition(mouse.position.ReadValue())))
+                Vector3 mouseWorldPos = GetMouseWorldPosition(mouse.position.ReadValue());
+                var topItem = GetTopDraggableUnderPoint(mouseWorldPos);
+                if (topItem != this)
                 {
                     return;
                 }
@@ -79,12 +126,15 @@ namespace GardenMerger.Tabletop
             }
         }
 
-        private void BeginDrag(Mouse mouse)
+        public void BeginDrag(Mouse mouse)
         {
+            if (_isDragging) return;
+
+            CurrentlyDraggedItem = this;
             _isDragging = true;
             if (_mainCamera == null) _mainCamera = Camera.main;
 
-            Vector3 mouseWorldPos = GetMouseWorldPosition(mouse.position.ReadValue());
+            Vector3 mouseWorldPos = GetMouseWorldPosition(mouse != null ? mouse.position.ReadValue() : Vector2.zero);
             _dragOffset = transform.position - mouseWorldPos;
             transform.localScale = _initialScale * 1.15f;
             RaiseRenderersForDragging();
@@ -114,6 +164,11 @@ namespace GardenMerger.Tabletop
         private void EndDrag()
         {
             _isDragging = false;
+            if (CurrentlyDraggedItem == this)
+            {
+                CurrentlyDraggedItem = null;
+            }
+
             transform.localScale = _initialScale;
             RestoreRendererSortingOrders();
             Vector3 pos = transform.position;

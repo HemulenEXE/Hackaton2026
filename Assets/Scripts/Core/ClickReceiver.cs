@@ -1,4 +1,5 @@
 using System;
+using GardenMerger.Tabletop;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -22,6 +23,11 @@ namespace GardenMerger.Core
                 return;
             }
 
+            if (DraggableItem.IsAnyDragging)
+            {
+                return;
+            }
+
             var hitCollider = GetComponent<Collider2D>();
             var camera = Camera.main;
             if (hitCollider == null || camera == null)
@@ -31,10 +37,20 @@ namespace GardenMerger.Core
 
             Vector3 screenPosition = mouse.position.ReadValue();
             screenPosition.z = -camera.transform.position.z;
-            if (hitCollider.OverlapPoint(camera.ScreenToWorldPoint(screenPosition)))
+            Vector3 worldPos = camera.ScreenToWorldPoint(screenPosition);
+
+            if (!hitCollider.OverlapPoint(worldPos))
             {
-                OnClick?.Invoke();
+                return;
             }
+
+            var topDraggable = DraggableItem.GetTopDraggableUnderPoint(worldPos);
+            if (topDraggable != null)
+            {
+                return;
+            }
+
+            OnClick?.Invoke();
         }
     }
 }
