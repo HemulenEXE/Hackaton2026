@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using GardenMerger.Configs;
 using GardenMerger.Core;
+using GardenMerger.Tabletop;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -76,7 +77,10 @@ namespace GardenMerger.UI
             BotanicalColor targetColor = ColorRegistry.GetColor(order.TargetColorId);
             if (_targetColorText != null)
             {
-                _targetColorText.text = $"Цель: {targetColor.DisplayName} — {targetColor.BotanicalName}";
+                string targetForm = order.RequiresFlowerForm
+                    ? $"\nФорма: {order.TargetFlowerForm.ToDisplayName()}"
+                    : string.Empty;
+                _targetColorText.text = $"Цель: {targetColor.DisplayName} — {targetColor.BotanicalName}{targetForm}";
             }
 
             if (_mergeCounterText != null)

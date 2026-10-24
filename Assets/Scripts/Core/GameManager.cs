@@ -301,6 +301,7 @@ namespace GardenMerger.Core
             };
             _incubator.OnTemperatureChanged += mode =>
             {
+                _notebookUI?.RecordObservation($"Температурный режим переключён: {GetTemperatureModeName(mode)}; оттенок изменяется без смены формы.");
                 switch (mode)
                 {
                     case TemperatureMode.Warm:
@@ -394,9 +395,22 @@ namespace GardenMerger.Core
                 _notebookUI?.RefreshUI();
             };
 
+            if (_incubator != null)
+            {
+                _incubator.OnHumidityChanged += mode =>
+                    _notebookUI?.RecordObservation($"Влажность переключена: {GetHumidityModeName(mode)}.");
+            }
+
             OnOrderCompleted += (order, isFinal) =>
             {
                 PlaySound(_orderCompletedSound);
+                if (order != null)
+                {
+                    string form = order.RequiresFlowerForm
+                        ? $" Форма «{order.TargetFlowerForm.ToDisplayName()}» подтверждена."
+                        : string.Empty;
+                    _notebookUI?.RecordObservation($"Выполнен заказ №{order.OrderId} «{order.ClientTitle}».{form}");
+                }
                 _notebookUI?.RefreshUI();
                 if (!isFinal && order != null)
                 {
@@ -428,6 +442,10 @@ namespace GardenMerger.Core
                     var pot = SpawnFlowerPot(colorId, _incubator.OutputTray.transform.position, form);
                     _incubator.OutputTray.AssignItem(pot);
                     PlaySound(_flowerCreatedSound);
+                    string temperature = GetTemperatureModeName(_incubator.CurrentTemperatureMode);
+                    string humidity = GetHumidityModeName(_incubator.CurrentHumidityMode);
+                    _notebookUI?.RecordObservation(
+                        $"Выращен цветок: {ColorRegistry.GetColor(colorId).DisplayName}, форма «{form.ToDisplayName()}»; температура — {temperature}, влажность — {humidity}.");
                     _hud?.ShowBanner("Росток распустился!", $"Получен цветок: {ColorRegistry.GetColor(colorId).DisplayName}");
                 };
             }
@@ -545,7 +563,18 @@ namespace GardenMerger.Core
                 else
                 {
                     PlaySound(_failureSound);
-                    _hud?.ShowBanner("Не тот сорт!", "Заказчик просит другой цветок.");
+                    if (CurrentOrder != null &&
+                        pot.ColorId == CurrentOrder.TargetColorId &&
+                        CurrentOrder.RequiresFlowerForm)
+                    {
+                        _hud?.ShowBanner(
+                            "Нужна другая форма!",
+                            $"Заказчик просит: {CurrentOrder.TargetFlowerForm.ToDisplayName()}.");
+                    }
+                    else
+                    {
+                        _hud?.ShowBanner("Не тот сорт!", "Заказчик просит другой цветок.");
+                    }
                 }
             };
 
@@ -659,6 +688,8 @@ namespace GardenMerger.Core
                         {
                             recipe.SetDiscovered(true);
                             isNewDiscovery = true;
+                            _notebookUI?.RecordObservation(
+                                $"Открыто скрещивание цветов {ColorRegistry.GetColor(parentA).DisplayName} × {ColorRegistry.GetColor(parentB).DisplayName}: получен {ColorRegistry.GetColor(hybridColor).DisplayName}.");
                             OnRecipeDiscovered?.Invoke(hybridColor, true);
                         }
                         break;
@@ -674,7 +705,9 @@ namespace GardenMerger.Core
         {
             if (flower == null || CurrentOrder == null) return false;
 
-            if (flower.ColorId == CurrentOrder.TargetColorId)
+            bool colorMatches = flower.ColorId == CurrentOrder.TargetColorId;
+            bool formMatches = !CurrentOrder.RequiresFlowerForm || flower.Form == CurrentOrder.TargetFlowerForm;
+            if (colorMatches && formMatches)
             {
                 bool isFinalOrder = (_currentOrderIndex == _orders.Count - 1);
                 OnOrderCompleted?.Invoke(CurrentOrder, isFinalOrder);
@@ -695,6 +728,32 @@ namespace GardenMerger.Core
             }
 
             return false;
+        }
+
+        private static string GetTemperatureModeName(TemperatureMode mode)
+        {
+            switch (mode)
+            {
+                case TemperatureMode.Warm:
+                    return "высокая";
+                case TemperatureMode.Cold:
+                    return "низкая";
+                default:
+                    return "нейтральная";
+            }
+        }
+
+        private static string GetHumidityModeName(HumidityMode mode)
+        {
+            switch (mode)
+            {
+                case HumidityMode.Humid:
+                    return "влажный";
+                case HumidityMode.Dry:
+                    return "сухой";
+                default:
+                    return "нейтральный";
+            }
         }
 
         public void AdvanceOrder()

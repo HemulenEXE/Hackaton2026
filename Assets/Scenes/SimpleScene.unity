@@ -6278,6 +6278,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 830fbaefe8119704a850a93e4c8488ad, type: 2}
   - {fileID: 11400000, guid: 43ad73d80bd608b42b74e630dcf386c9, type: 2}
   - {fileID: 11400000, guid: 91671e5ad788d2845a3ceb05ff45fbb2, type: 2}
+  - {fileID: 11400000, guid: 2e893d77a22347b2a967d6de22bd9901, type: 2}
+  - {fileID: 11400000, guid: 7a9bc320c14045f1a8c36b1239b809c2, type: 2}
+  - {fileID: 11400000, guid: 39ca59aeea7141fe90d8c83b68b65326, type: 2}
+  - {fileID: 11400000, guid: e1b125a7b2d2499a9c92c719a41bd2f0, type: 2}
   _recipes:
   - {fileID: 11400000, guid: d255ec89d8da07d43b5f0b8de604eb8d, type: 2}
   - {fileID: 11400000, guid: fd601e494b3efec4c858661157cc4829, type: 2}
