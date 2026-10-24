@@ -66,8 +66,15 @@ Shader "GardenMerger/FlowerMaskTint"
             {
                 half4 flower = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
                 half4 maskPixel = SAMPLE_TEXTURE2D(_MaskTex, sampler_MaskTex, input.uv);
-                half mask = maskPixel.a * (1.0h - dot(maskPixel.rgb, half3(0.299h, 0.587h, 0.114h)));
-                flower.rgb = lerp(flower.rgb, _FlowerColor.rgb, mask);
+
+                half mask = max(maskPixel.a, max(maskPixel.r, maskPixel.g));
+                half lum = dot(flower.rgb, half3(0.299h, 0.587h, 0.114h));
+
+                half3 tinted = _FlowerColor.rgb * saturate(lum * 1.08h);
+                half highlight = saturate((lum - 0.88h) / 0.12h) * 0.12h;
+                tinted = saturate(tinted + highlight);
+
+                flower.rgb = lerp(flower.rgb, tinted, mask);
                 return flower * input.color;
             }
             ENDHLSL
