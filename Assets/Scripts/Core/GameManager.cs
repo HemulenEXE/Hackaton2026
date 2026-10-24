@@ -40,6 +40,11 @@ namespace GardenMerger.Core
 
         public void Initialize(List<OrderConfigSO> orders, List<BreedingRecipeSO> recipes)
         {
+            if (Instance == null)
+            {
+                Instance = this;
+            }
+
             _orders = orders;
             _recipes = recipes;
             _currentOrderIndex = 0;

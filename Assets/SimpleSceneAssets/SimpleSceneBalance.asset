@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c10011c7d6da940468313ed438f30041, type: 3}
+  m_Name: SimpleSceneBalance
+  m_EditorClassIdentifier: Assembly-CSharp::GardenMerger.Configs.TabletopBalanceSO
+  _snapRadius: 1
+  _dragElevationScale: 1.15
+  _dragZOffset: -0.5
+  _sproutDurationSec: 0.45
+  _synthesisDurationSec: 0.6
+  _wasteChuteFadeDurationSec: 0.35
+  _deskBounds: {x: 8.5, y: 4.5}
