@@ -21,7 +21,7 @@ namespace GardenMerger.Tabletop
         public TableSlot OutputDish => _outputDish;
         public bool IsProcessing => _isProcessing;
 
-        public event Action<string, string, string> OnBreedingCompleted;
+        public event Action<string, string, string, FlowerForm> OnBreedingCompleted;
 
         public void Setup(TableSlot slotA, TableSlot slotB, TableSlot outputDish, Transform button, ParticleSystem particles, float duration)
         {
@@ -81,7 +81,7 @@ namespace GardenMerger.Tabletop
                 string hybridColor = ColorRegistry.CombineColors(parentAColor, parentBColor);
 
                 // Parents remain intact in their slots!
-                OnBreedingCompleted?.Invoke(parentAColor, parentBColor, hybridColor);
+                OnBreedingCompleted?.Invoke(parentAColor, parentBColor, hybridColor, potA.Form);
             }
 
             _isProcessing = false;

@@ -5,6 +5,22 @@ using UnityEngine;
 
 namespace GardenMerger.Tabletop
 {
+    public enum FlowerForm
+    {
+        Flowers6 = 0,
+        Flowers13 = 1,
+        Flowers23 = 2,
+        Flowers41 = 3,
+        Flowers46 = 4
+    }
+
+    public enum HumidityMode
+    {
+        Neutral,
+        Humid,
+        Dry
+    }
+
     public enum TemperatureMode
     {
         Neutral,
@@ -23,14 +39,17 @@ namespace GardenMerger.Tabletop
         private bool _isProcessing;
         private Vector3 _leverInitialRot;
         private TemperatureMode _temperatureMode;
+        private HumidityMode _humidityMode;
 
         public TableSlot SeedSlot => _seedSlot;
         public TableSlot OutputTray => _outputTray;
         public bool IsProcessing => _isProcessing;
         public TemperatureMode CurrentTemperatureMode => _temperatureMode;
+        public HumidityMode CurrentHumidityMode => _humidityMode;
 
-        public event Action<string> OnFlowerSprouted;
+        public event Action<string, FlowerForm> OnFlowerSprouted;
         public event Action<TemperatureMode> OnTemperatureChanged;
+        public event Action<HumidityMode> OnHumidityChanged;
 
         private void Awake()
         {
@@ -68,8 +87,42 @@ namespace GardenMerger.Tabletop
                 return false;
             }
 
-            StartCoroutine(ProcessSprout(_temperatureMode));
+            StartCoroutine(ProcessSprout(_temperatureMode, _humidityMode));
             return true;
+        }
+
+        public HumidityMode CycleHumidity()
+        {
+            switch (_humidityMode)
+            {
+                case HumidityMode.Neutral:
+                    SetHumidity(HumidityMode.Humid);
+                    break;
+                case HumidityMode.Humid:
+                    SetHumidity(HumidityMode.Dry);
+                    break;
+                default:
+                    SetHumidity(HumidityMode.Neutral);
+                    break;
+            }
+
+            return _humidityMode;
+        }
+
+        public void SetHumidity(HumidityMode mode)
+        {
+            switch (mode)
+            {
+                case HumidityMode.Neutral:
+                case HumidityMode.Humid:
+                case HumidityMode.Dry:
+                    _humidityMode = mode;
+                    OnHumidityChanged?.Invoke(_humidityMode);
+                    break;
+                default:
+                    Debug.LogError($"Invalid humidity mode '{mode}'.", this);
+                    break;
+            }
         }
 
         public TemperatureMode CycleTemperature()
@@ -120,7 +173,7 @@ namespace GardenMerger.Tabletop
             _leverTransform.localEulerAngles = _leverInitialRot;
         }
 
-        private IEnumerator ProcessSprout(TemperatureMode temperatureMode)
+        private IEnumerator ProcessSprout(TemperatureMode temperatureMode, HumidityMode humidityMode)
         {
             _isProcessing = true;
 
@@ -134,6 +187,7 @@ namespace GardenMerger.Tabletop
             if (_seedSlot.CurrentItem is SeedItem seed)
             {
                 string colorId = seed.ColorId;
+                FlowerForm flowerForm = ApplyHumidity(seed.Form, humidityMode);
                 if (ColorRegistry.TryParseColor(colorId, out FlowerColor seedColor))
                 {
                     switch (temperatureMode)
@@ -156,10 +210,18 @@ namespace GardenMerger.Tabletop
                 Destroy(seed.gameObject);
 
                 // Spawn new flower pot on output tray
-                OnFlowerSprouted?.Invoke(colorId);
+                OnFlowerSprouted?.Invoke(colorId, flowerForm);
             }
 
             _isProcessing = false;
+        }
+
+        private FlowerForm ApplyHumidity(FlowerForm form, HumidityMode humidityMode)
+        {
+            int adjustment = humidityMode == HumidityMode.Humid ? 1 :
+                humidityMode == HumidityMode.Dry ? -1 : 0;
+            int formIndex = Mathf.Clamp((int)form + adjustment, (int)FlowerForm.Flowers6, (int)FlowerForm.Flowers46);
+            return (FlowerForm)formIndex;
         }
     }
 }

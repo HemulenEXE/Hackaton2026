@@ -9,20 +9,43 @@ namespace GardenMerger.Tabletop
         [SerializeField] private SpriteRenderer _stemRenderer;
         [SerializeField] private SpriteRenderer _petalsRenderer;
         [SerializeField] private SpriteRenderer _pistilRenderer;
+        [SerializeField] private FlowerForm _form = FlowerForm.Flowers6;
 
         private BotanicalColor _colorData;
 
         public BotanicalColor ColorData => _colorData;
+        public FlowerForm Form => _form;
 
-        public void Initialize(string colorId)
+        public void Initialize(
+            string colorId,
+            FlowerForm form,
+            Sprite flowerSprite,
+            Texture2D colorMask,
+            Material maskMaterial)
         {
             _colorId = colorId;
+            _form = form;
             _colorData = ColorRegistry.GetColor(colorId);
 
-            if (_petalsRenderer != null)
+            if (_petalsRenderer == null)
             {
-                _petalsRenderer.color = _colorData.Color;
+                Debug.LogError("Flower petals renderer is missing.", this);
+                return;
             }
+
+            _petalsRenderer.sprite = flowerSprite;
+            if (flowerSprite == null || colorMask == null || maskMaterial == null)
+            {
+                Debug.LogError($"Flower visuals are not configured for form '{form}'.", this);
+                return;
+            }
+
+            _petalsRenderer.sharedMaterial = maskMaterial;
+            var propertyBlock = new MaterialPropertyBlock();
+            _petalsRenderer.GetPropertyBlock(propertyBlock);
+            propertyBlock.SetTexture("_MaskTex", colorMask);
+            propertyBlock.SetColor("_FlowerColor", _colorData.Color);
+            _petalsRenderer.SetPropertyBlock(propertyBlock);
         }
 
         public void SetRenderers(SpriteRenderer pot, SpriteRenderer stem, SpriteRenderer petals, SpriteRenderer pistil)

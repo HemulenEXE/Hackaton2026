@@ -16,10 +16,16 @@ namespace GardenMerger.Core
         [SerializeField] private TabletopBalanceSO _balanceSO;
         [SerializeField] private List<OrderConfigSO> _orders = new List<OrderConfigSO>();
         [SerializeField] private List<BreedingRecipeSO> _recipes = new List<BreedingRecipeSO>();
+        [Header("Flower Forms (6, 13, 23, 41, 46)")]
+        [SerializeField] private List<Sprite> _flowerFormSprites = new List<Sprite>();
+        [SerializeField] private List<Texture2D> _flowerColorMasks = new List<Texture2D>();
+        [SerializeField] private Shader _flowerMaskShader;
+        [SerializeField] private Sprite _potSprite;
 
         private int _currentOrderIndex;
         private int _orderMergeCount;
         private bool _isCampaignWon;
+        private Material _flowerMaskMaterial;
 
         // UI & Scene Bindings
         private TabletopHUD _hud;
@@ -54,6 +60,8 @@ namespace GardenMerger.Core
             }
             Instance = this;
 
+            EnsureFlowerMaskMaterial();
+
             ResolveLegacyBootstrapData();
 
             SetupCamera();
@@ -65,6 +73,19 @@ namespace GardenMerger.Core
             _isCampaignWon = false;
 
             NotifyOrderChanged();
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this)
+            {
+                Instance = null;
+            }
+
+            if (_flowerMaskMaterial != null)
+            {
+                Destroy(_flowerMaskMaterial);
+            }
         }
 
         public void Initialize(List<OrderConfigSO> orders, List<BreedingRecipeSO> recipes)
@@ -350,9 +371,9 @@ namespace GardenMerger.Core
 
             if (_incubator != null)
             {
-                _incubator.OnFlowerSprouted += (colorId) =>
+                _incubator.OnFlowerSprouted += (colorId, form) =>
                 {
-                    var pot = SpawnFlowerPot(colorId, _incubator.OutputTray.transform.position);
+                    var pot = SpawnFlowerPot(colorId, _incubator.OutputTray.transform.position, form);
                     _incubator.OutputTray.AssignItem(pot);
                     _hud?.ShowBanner("Росток распустился!", $"Получен цветок: {ColorRegistry.GetColor(colorId).DisplayName}");
                 };
@@ -360,10 +381,10 @@ namespace GardenMerger.Core
 
             if (_crossBreeder != null)
             {
-                _crossBreeder.OnBreedingCompleted += (parentA, parentB, hybridColor) =>
+                _crossBreeder.OnBreedingCompleted += (parentA, parentB, hybridColor, inheritedForm) =>
                 {
                     CheckRecipeDiscovery(parentA, parentB, out _, out bool newlyDiscovered);
-                    var seed = SpawnSeed(hybridColor, _crossBreeder.OutputDish.transform.position);
+                    var seed = SpawnSeed(hybridColor, _crossBreeder.OutputDish.transform.position, inheritedForm);
                     _crossBreeder.OutputDish.AssignItem(seed);
 
                     if (!newlyDiscovered)
@@ -374,7 +395,7 @@ namespace GardenMerger.Core
             }
         }
 
-        public SeedItem SpawnSeed(string colorId, Vector3 position)
+        public SeedItem SpawnSeed(string colorId, Vector3 position, FlowerForm form = FlowerForm.Flowers6)
         {
             var seedObject = new GameObject($"Seed_{colorId}");
             seedObject.transform.position = position;
@@ -388,7 +409,7 @@ namespace GardenMerger.Core
 
             var seed = seedObject.AddComponent<SeedItem>();
             seed.SetRenderer(renderer);
-            seed.Initialize(colorId);
+            seed.Initialize(colorId, form);
             seed.SetDeskBounds(_balanceSO != null ? _balanceSO.DeskBounds : new Vector2(8.5f, 4.5f));
             seed.OnItemDropped += item =>
             {
@@ -400,20 +421,27 @@ namespace GardenMerger.Core
             return seed;
         }
 
-        public FlowerPot SpawnFlowerPot(string colorId, Vector3 position)
+        public FlowerPot SpawnFlowerPot(string colorId, Vector3 position, FlowerForm form = FlowerForm.Flowers6)
         {
+            EnsureFlowerMaskMaterial();
+
             var potObject = new GameObject($"FlowerPot_{colorId}");
             potObject.transform.position = position;
 
-            var potRenderer = potObject.AddComponent<SpriteRenderer>();
-            potRenderer.sprite = CreateQuadSprite(new Color(0.75f, 0.35f, 0.18f));
             potObject.transform.localScale = new Vector3(1.2f, 1.2f, 1f);
 
+            var potVisual = new GameObject("Pot");
+            potVisual.transform.SetParent(potObject.transform, false);
+            potVisual.transform.localPosition = new Vector3(-0.5f, -0.5f, 0f);
+            var potRenderer = potVisual.AddComponent<SpriteRenderer>();
+            potRenderer.sprite = _potSprite;
+            potRenderer.sortingOrder = 0;
+
             var petalsObject = new GameObject("Petals");
-            petalsObject.transform.SetParent(potObject.transform);
-            petalsObject.transform.localPosition = new Vector3(0f, 0.35f, -0.1f);
+            petalsObject.transform.SetParent(potObject.transform, false);
+            petalsObject.transform.localPosition = new Vector3(-0.5f, 0.25f, -0.1f);
             var petalsRenderer = petalsObject.AddComponent<SpriteRenderer>();
-            petalsRenderer.sprite = CreateCircleSprite(ColorRegistry.GetColor(colorId).Color);
+            petalsRenderer.sortingOrder = 1;
             petalsObject.transform.localScale = Vector3.one * 0.7f;
 
             var collider = potObject.AddComponent<BoxCollider2D>();
@@ -421,7 +449,16 @@ namespace GardenMerger.Core
 
             var pot = potObject.AddComponent<FlowerPot>();
             pot.SetRenderers(potRenderer, null, petalsRenderer, null);
-            pot.Initialize(colorId);
+            int formIndex = Mathf.Clamp((int)form, (int)FlowerForm.Flowers6, (int)FlowerForm.Flowers46);
+            Sprite flowerSprite = formIndex < _flowerFormSprites.Count ? _flowerFormSprites[formIndex] : null;
+            Texture2D colorMask = formIndex < _flowerColorMasks.Count ? _flowerColorMasks[formIndex] : null;
+            if (flowerSprite == null || colorMask == null || _flowerMaskMaterial == null)
+            {
+                Debug.LogError(
+                    $"Missing flower visuals at form index {formIndex}. Assign the ordered flower sprites, masks, and mask material on GameManager.",
+                    this);
+            }
+            pot.Initialize(colorId, (FlowerForm)formIndex, flowerSprite, colorMask, _flowerMaskMaterial);
             pot.SetDeskBounds(_balanceSO != null ? _balanceSO.DeskBounds : new Vector2(8.5f, 4.5f));
             pot.OnItemDropped += item =>
             {
@@ -447,6 +484,23 @@ namespace GardenMerger.Core
             };
 
             return pot;
+        }
+
+        private bool EnsureFlowerMaskMaterial()
+        {
+            if (_flowerMaskMaterial != null)
+            {
+                return true;
+            }
+
+            if (_flowerMaskShader == null)
+            {
+                Debug.LogError("Flower mask shader is not assigned on GameManager.", this);
+                return false;
+            }
+
+            _flowerMaskMaterial = new Material(_flowerMaskShader);
+            return true;
         }
 
         private Sprite CreateCircleSprite(Color color)
