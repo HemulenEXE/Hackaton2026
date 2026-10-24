@@ -16,12 +16,26 @@ namespace GardenMerger.Tabletop
         public BotanicalColor ColorData => _colorData;
         public FlowerForm Form => _form;
 
-        public void Initialize(
-            string colorId,
-            FlowerForm form,
-            Sprite flowerSprite,
-            Texture2D colorMask,
-            Material maskMaterial)
+        
+        protected override void Awake()
+        {
+            base.Awake();
+            if (_potRenderer == null)
+            {
+                _potRenderer = GetComponent<SpriteRenderer>();
+            }
+
+            if (_petalsRenderer == null)
+            {
+                var petalsTransform = transform.Find("Petals");
+                if (petalsTransform != null)
+                {
+                    _petalsRenderer = petalsTransform.GetComponent<SpriteRenderer>();
+                }
+            }
+        }
+
+        public void Initialize(string colorId,FlowerForm form,Sprite flowerSprite,Texture2D colorMask,Material maskMaterial)
         {
             _colorId = colorId;
             _form = form;
@@ -39,6 +53,12 @@ namespace GardenMerger.Tabletop
                 Debug.LogError($"Flower visuals are not configured for form '{form}'.", this);
                 return;
             }
+            else if (_potRenderer != null)
+            {
+                // Fallback: если отдельного рендера лепестков нет, окрашиваем пот
+                _potRenderer.color = _colorData.Color;
+            }
+
 
             _petalsRenderer.sharedMaterial = maskMaterial;
             var propertyBlock = new MaterialPropertyBlock();
@@ -46,7 +66,7 @@ namespace GardenMerger.Tabletop
             propertyBlock.SetTexture("_MaskTex", colorMask);
             propertyBlock.SetColor("_FlowerColor", _colorData.Color);
             _petalsRenderer.SetPropertyBlock(propertyBlock);
-        }
+                    }
 
         public void SetRenderers(SpriteRenderer pot, SpriteRenderer stem, SpriteRenderer petals, SpriteRenderer pistil)
         {

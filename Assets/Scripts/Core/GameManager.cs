@@ -22,6 +22,10 @@ namespace GardenMerger.Core
         [SerializeField] private Shader _flowerMaskShader;
         [SerializeField] private Sprite _potSprite;
 
+        [Header("Prefabs")]
+        [SerializeField] private SeedItem _seedPrefab;
+        [SerializeField] private FlowerPot _flowerPotPrefab;
+
         private int _currentOrderIndex;
         private int _orderMergeCount;
         private bool _isCampaignWon;
@@ -42,6 +46,8 @@ namespace GardenMerger.Core
         public OrderConfigSO CurrentOrder => (_orders != null && _currentOrderIndex < _orders.Count) ? _orders[_currentOrderIndex] : null;
         public List<BreedingRecipeSO> Recipes => _recipes;
         public TabletopBalanceSO Balance => _balanceSO;
+        public SeedItem SeedPrefab => _seedPrefab;
+        public FlowerPot FlowerPotPrefab => _flowerPotPrefab;
         public TabletopHUD HUD => _hud;
         public IncubatorMachine Incubator => _incubator;
         public CrossBreederMachine CrossBreeder => _crossBreeder;
@@ -397,8 +403,20 @@ namespace GardenMerger.Core
 
         public SeedItem SpawnSeed(string colorId, Vector3 position, FlowerForm form = FlowerForm.Flowers6)
         {
-            var seedObject = new GameObject($"Seed_{colorId}");
-            seedObject.transform.position = position;
+            SeedItem seed;
+            if (_seedPrefab != null)
+            {
+                seed = Instantiate(_seedPrefab, position, Quaternion.identity);
+            }
+            else
+            {
+                Debug.LogWarning("Seed prefab is not assigned in GameManager! Creating default instance.", this);
+                var seedObject = new GameObject($"Seed_{colorId}");
+                seedObject.transform.position = position;
+                var collider = seedObject.AddComponent<CircleCollider2D>();
+                collider.radius = 0.35f;
+                seed = seedObject.AddComponent<SeedItem>();
+            }
 
             var renderer = seedObject.AddComponent<SpriteRenderer>();
             renderer.sprite = CreateCircleSprite(ColorRegistry.GetColor(colorId).Color);
@@ -410,6 +428,8 @@ namespace GardenMerger.Core
             var seed = seedObject.AddComponent<SeedItem>();
             seed.SetRenderer(renderer);
             seed.Initialize(colorId, form);
+            seed.name = $"Seed_{colorId}";
+            //seed.Initialize(colorId);
             seed.SetDeskBounds(_balanceSO != null ? _balanceSO.DeskBounds : new Vector2(8.5f, 4.5f));
             seed.OnItemDropped += item =>
             {
