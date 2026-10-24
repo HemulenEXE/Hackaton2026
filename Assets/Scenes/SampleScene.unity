@@ -398,3 +398,6 @@ MonoBehaviour:
   _balanceSO: {fileID: 0}
   _ordersSO: []
   _recipesSO: []
+  _pollinatorFrameSprite: {fileID: -4917428772853489939, guid: ed300de5d43e5404a9cf888e573a941d, type: 3}
+  _pollinatorGlassLeftSprite: {fileID: -7294193159830744292, guid: fb83337419157e84ab6025af79f81255, type: 3}
+  _pollinatorGlassRightSprite: {fileID: 4567059739755969186, guid: fb83337419157e84ab6025af79f81255, type: 3}

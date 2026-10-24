@@ -16,6 +16,9 @@ namespace GardenMerger.Core
         [SerializeField] private TabletopBalanceSO _balanceSO;
         [SerializeField] private List<OrderConfigSO> _ordersSO;
         [SerializeField] private List<BreedingRecipeSO> _recipesSO;
+        [SerializeField] private Sprite _pollinatorFrameSprite;
+        [SerializeField] private Sprite _pollinatorGlassLeftSprite;
+        [SerializeField] private Sprite _pollinatorGlassRightSprite;
 
         private Camera _mainCamera;
         private Canvas _mainCanvas;
@@ -149,7 +152,7 @@ namespace GardenMerger.Core
             CreateGreenhousePlant("VineRight", new Vector3(8.25f, 4.35f, 0.4f), 1f);
 
             CreateWorldLabel("INCUBATOR_LABEL", "ИНКУБАТОР", new Vector3(-5.5f, 2.15f, -0.2f));
-            CreateWorldLabel("BREEDER_LABEL", "СЕЛЕКЦИЯ", new Vector3(1.8f, 1.5f, -0.2f));
+            CreateWorldLabel("POLLINATOR_LABEL", "ОПЫЛИТЕЛЬ", new Vector3(1.8f, 1.5f, -0.2f));
             CreateWorldLabel("SEED_LABEL", "СЕМЕНА", new Vector3(-4.2f, -4.75f, -0.2f));
             CreateWorldLabel("ORDER_LABEL", "ЗАКАЗЫ", new Vector3(3.6f, 2.75f, -0.2f));
             CreateWorldLabel("WASTE_LABEL", "ОТХОДЫ", new Vector3(7.2f, 2.75f, -0.2f));
@@ -242,22 +245,36 @@ namespace GardenMerger.Core
 
             leverGo.AddComponent<ClickReceiver>().OnClick += () => _incubator.TryPullLever();
 
-            // 2. Cross-Breeder Machine
+            // 2. Pollinator artwork replaces the Cross-Breeder body.
             var cbGo = new GameObject("CrossBreeder");
             cbGo.transform.position = new Vector3(1.8f, -0.6f, 0);
-            var breederBody = new GameObject("CrossBreederBody");
-            breederBody.transform.SetParent(cbGo.transform, false);
-            var cbSr = breederBody.AddComponent<SpriteRenderer>();
-            cbSr.sprite = CreateQuadSprite(new Color(0.35f, 0.25f, 0.15f));
-            breederBody.transform.localScale = new Vector3(5.2f, 4.2f, 1f);
+            if (_pollinatorFrameSprite == null ||
+                _pollinatorGlassLeftSprite == null ||
+                _pollinatorGlassRightSprite == null)
+            {
+                Debug.LogError("Assign the pollinator frame and both glass sprites on GameBootstrap.", this);
+            }
+            else
+            {
+                const float spriteScale = 3f;
+                float pixelsToWorld = spriteScale / _pollinatorFrameSprite.pixelsPerUnit;
+                Vector3 framePosition = new Vector3(
+                    (_pollinatorFrameSprite.pivot.x - _pollinatorFrameSprite.rect.width * 0.5f) * pixelsToWorld,
+                    (_pollinatorFrameSprite.pivot.y - _pollinatorFrameSprite.rect.height * 0.5f) * pixelsToWorld,
+                    0f);
 
-            var slotAGo = CreateSlotObject("ParentSlotA", cbGo.transform, new Vector3(-1.25f, 0.25f, -0.1f), SlotType.CrossBreederParentA, 1.1f);
-            var slotBGo = CreateSlotObject("ParentSlotB", cbGo.transform, new Vector3(1.25f, 0.25f, -0.1f), SlotType.CrossBreederParentB, 1.1f);
+                CreatePollinatorLayer("PollinatorFrame", _pollinatorFrameSprite, _pollinatorFrameSprite, cbGo.transform, framePosition, spriteScale, -1);
+                CreatePollinatorLayer("PollinatorGlassLeft", _pollinatorGlassLeftSprite, _pollinatorFrameSprite, cbGo.transform, framePosition, spriteScale, 1);
+                CreatePollinatorLayer("PollinatorGlassRight", _pollinatorGlassRightSprite, _pollinatorFrameSprite, cbGo.transform, framePosition, spriteScale, 1);
+            }
+
+            var slotAGo = CreateSlotObject("ParentSlotA", cbGo.transform, new Vector3(-0.89f, -0.7f, -0.1f), SlotType.CrossBreederParentA, 1.1f);
+            var slotBGo = CreateSlotObject("ParentSlotB", cbGo.transform, new Vector3(0.89f, -0.7f, -0.1f), SlotType.CrossBreederParentB, 1.1f);
             var dishGo = CreateSlotObject("SeedDish", cbGo.transform, new Vector3(0, -1.05f, -0.1f), SlotType.CrossBreederSeedOutput, 0.9f);
 
             var buttonGo = new GameObject("SynthesisButton");
             buttonGo.transform.SetParent(cbGo.transform);
-            buttonGo.transform.localPosition = new Vector3(0, 0.25f, -0.2f);
+            buttonGo.transform.localPosition = new Vector3(1.41f, -1.22f, -0.2f);
             var btnCol = buttonGo.AddComponent<CircleCollider2D>();
             btnCol.radius = 0.4f;
             var btnSr = buttonGo.AddComponent<SpriteRenderer>();
@@ -293,6 +310,23 @@ namespace GardenMerger.Core
             // 4. Order Station Tray
             var orderTrayGo = CreateSlotObject("OrderDeliveryTray", null, new Vector3(3.6f, 3.8f, 0), SlotType.OrderSubmissionTray, 1.2f);
             _orderTray = orderTrayGo.GetComponent<TableSlot>();
+        }
+
+        private void CreatePollinatorLayer(string name, Sprite sprite, Sprite frameSprite, Transform parent, Vector3 framePosition, float frameScale, int sortingOrder)
+        {
+            var layer = new GameObject(name);
+            layer.transform.SetParent(parent, false);
+            float pixelsToWorld = frameScale / frameSprite.pixelsPerUnit;
+            layer.transform.localPosition = framePosition + new Vector3(
+                (sprite.rect.xMin + sprite.pivot.x - frameSprite.rect.xMin - frameSprite.pivot.x) * pixelsToWorld,
+                (sprite.rect.yMin + sprite.pivot.y - frameSprite.rect.yMin - frameSprite.pivot.y) * pixelsToWorld,
+                sortingOrder > 0 ? -0.1f : 0f);
+            float spriteScale = frameScale * sprite.pixelsPerUnit / frameSprite.pixelsPerUnit;
+            layer.transform.localScale = Vector3.one * spriteScale;
+
+            var renderer = layer.AddComponent<SpriteRenderer>();
+            renderer.sprite = sprite;
+            renderer.sortingOrder = sortingOrder;
         }
 
         private GameObject CreateSlotObject(string name, Transform parent, Vector3 localPos, SlotType type, float snapRadius)
