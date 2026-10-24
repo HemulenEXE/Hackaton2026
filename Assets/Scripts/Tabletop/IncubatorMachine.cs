@@ -14,6 +14,28 @@ namespace GardenMerger.Tabletop
         Flowers46 = 4
     }
 
+    public static class FlowerFormExtensions
+    {
+        public static string ToDisplayName(this FlowerForm form)
+        {
+            switch (form)
+            {
+                case FlowerForm.Flowers6:
+                    return "Лилия";
+                case FlowerForm.Flowers13:
+                    return "Ромашка";
+                case FlowerForm.Flowers23:
+                    return "Цветы на веточке";
+                case FlowerForm.Flowers41:
+                    return "Несколько ромашек";
+                case FlowerForm.Flowers46:
+                    return "Колокольчик";
+                default:
+                    return form.ToString();
+            }
+        }
+    }
+
     public enum HumidityMode
     {
         Neutral,
