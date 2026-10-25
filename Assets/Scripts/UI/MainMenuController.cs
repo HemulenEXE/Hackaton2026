@@ -24,6 +24,8 @@ namespace GardenMerger.UI
 
         private void Awake()
         {
+            GameTextStyle.ApplyToScene(gameObject.scene);
+
             if (_playButton == null)
             {
                 _playButton = GetComponentInChildren<Button>();

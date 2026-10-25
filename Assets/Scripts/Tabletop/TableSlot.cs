@@ -17,7 +17,7 @@ namespace GardenMerger.Tabletop
         private const int MachineItemSortingOrder = 1;
 
         [SerializeField] private SlotType _slotType;
-        [SerializeField] private float _snapRadius = 1.0f;
+        [SerializeField] private float _snapRadius = 1.5f;
         private DraggableItem _currentItem;
 
         public SlotType SlotType => _slotType;

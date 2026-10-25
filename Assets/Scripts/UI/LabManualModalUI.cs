@@ -12,6 +12,8 @@ namespace GardenMerger.UI
         private CanvasGroup _canvasGroup;
         private Button _bottomConfirmButton;
         private Button _cornerHelpButton;
+        private ScrollRect _bodyScrollRect;
+        private RectTransform _bodyContent;
         private AudioClip _clickSound;
         private AudioSource _audioSource;
         private Coroutine _animRoutine;
@@ -41,16 +43,7 @@ namespace GardenMerger.UI
 
         private void BuildUI(Transform canvasTransform)
         {
-            Font mainFont = null;
-            var sampleText = canvasTransform.GetComponentInChildren<Text>(true);
-            if (sampleText != null && sampleText.font != null)
-            {
-                mainFont = sampleText.font;
-            }
-            if (mainFont == null)
-            {
-                mainFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            }
+            Font mainFont = GameTextStyle.ReadableFont;
 
             _audioSource = GetComponent<AudioSource>();
             if (_audioSource == null)
@@ -227,7 +220,7 @@ namespace GardenMerger.UI
             scrollRt.offsetMin = new Vector2(36f, 75f);
             scrollRt.offsetMax = new Vector2(-36f, -52f);
 
-            var scrollRect = scrollObj.GetComponent<ScrollRect>();
+            _bodyScrollRect = scrollObj.GetComponent<ScrollRect>();
 
             var viewportObj = new GameObject("Viewport", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(RectMask2D));
             viewportObj.transform.SetParent(scrollObj.transform, false);
@@ -235,12 +228,39 @@ namespace GardenMerger.UI
             viewportRt.anchorMin = Vector2.zero;
             viewportRt.anchorMax = Vector2.one;
             viewportRt.offsetMin = Vector2.zero;
-            viewportRt.offsetMax = Vector2.zero;
+            viewportRt.offsetMax = new Vector2(-22f, 0f);
             viewportObj.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.01f);
+
+            var scrollbarTrackObj = new GameObject("ScrollbarTrack", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            scrollbarTrackObj.transform.SetParent(scrollObj.transform, false);
+            var scrollbarTrackRt = scrollbarTrackObj.GetComponent<RectTransform>();
+            scrollbarTrackRt.anchorMin = new Vector2(1f, 0f);
+            scrollbarTrackRt.anchorMax = Vector2.one;
+            scrollbarTrackRt.pivot = Vector2.one;
+            scrollbarTrackRt.anchoredPosition = new Vector2(-4f, 0f);
+            scrollbarTrackRt.sizeDelta = new Vector2(12f, 0f);
+            scrollbarTrackObj.GetComponent<Image>().color = new Color(0.12f, 0.20f, 0.23f, 0.95f);
+
+            var scrollbarThumbObj = new GameObject("ScrollbarThumb", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            scrollbarThumbObj.transform.SetParent(scrollbarTrackObj.transform, false);
+            var scrollbarThumbRt = scrollbarThumbObj.GetComponent<RectTransform>();
+            scrollbarThumbRt.anchorMin = Vector2.zero;
+            scrollbarThumbRt.anchorMax = Vector2.one;
+            scrollbarThumbRt.offsetMin = new Vector2(2f, 2f);
+            scrollbarThumbRt.offsetMax = new Vector2(-2f, -2f);
+            var scrollbarThumbImage = scrollbarThumbObj.GetComponent<Image>();
+            scrollbarThumbImage.color = new Color(0.20f, 0.82f, 0.60f, 1f);
+
+            var scrollbar = scrollbarTrackObj.AddComponent<Scrollbar>();
+            scrollbar.handleRect = scrollbarThumbRt;
+            scrollbar.targetGraphic = scrollbarThumbImage;
+            scrollbar.direction = Scrollbar.Direction.BottomToTop;
+            scrollbar.navigation = new Navigation { mode = Navigation.Mode.None };
 
             var contentObj = new GameObject("Content", typeof(RectTransform), typeof(ContentSizeFitter), typeof(VerticalLayoutGroup));
             contentObj.transform.SetParent(viewportObj.transform, false);
             var contentRt = contentObj.GetComponent<RectTransform>();
+            _bodyContent = contentRt;
             contentRt.anchorMin = new Vector2(0f, 1f);
             contentRt.anchorMax = new Vector2(1f, 1f);
             contentRt.pivot = new Vector2(0.5f, 1f);
@@ -258,30 +278,25 @@ namespace GardenMerger.UI
             layout.spacing = 10f;
             layout.padding = new RectOffset(0, 0, 4, 10);
 
-            scrollRect.viewport = viewportRt;
-            scrollRect.content = contentRt;
-            scrollRect.horizontal = false;
-            scrollRect.vertical = true;
-            scrollRect.movementType = ScrollRect.MovementType.Clamped;
-            scrollRect.scrollSensitivity = 35f;
+            var introBlockObj = new GameObject("HeaderArea", typeof(RectTransform), typeof(Text), typeof(LayoutElement));
+            introBlockObj.transform.SetParent(contentObj.transform, false);
+            var bodyHeaderTxt = introBlockObj.GetComponent<Text>();
+            bodyHeaderTxt.font = font;
+            bodyHeaderTxt.fontSize = 18;
+            bodyHeaderTxt.fontStyle = FontStyle.Normal;
+            bodyHeaderTxt.lineSpacing = 1.2f;
+            bodyHeaderTxt.alignment = TextAnchor.MiddleCenter;
+            bodyHeaderTxt.supportRichText = true;
+            bodyHeaderTxt.horizontalOverflow = HorizontalWrapMode.Wrap;
+            bodyHeaderTxt.verticalOverflow = VerticalWrapMode.Overflow;
+            bodyHeaderTxt.text =
+                "<size=15><color=#258A66>БОТАНИЧЕСКАЯ СТАНЦИЯ · ВВОДНЫЙ РЕГЛАМЕНТ</color></size>\n" +
+                "<color=#25312D>Поздравляем с приёмом на работу стажёром-лаборантом! Вот ваше рабочее место. " +
+                "Кликните на мешок с семенами, чтобы получить обычное семечко. Ниже — порядок работы с оборудованием.</color>";
+            var headerLayout = introBlockObj.GetComponent<LayoutElement>();
+            headerLayout.minHeight = 110f;
+            headerLayout.preferredHeight = 110f;
 
-            // Welcome Text item
-            var welcomeObj = new GameObject("WelcomeText", typeof(RectTransform), typeof(Text), typeof(ContentSizeFitter));
-            welcomeObj.transform.SetParent(contentObj.transform, false);
-            var welcomeTxt = welcomeObj.GetComponent<Text>();
-            welcomeTxt.font = font;
-            welcomeTxt.fontSize = 15;
-            welcomeTxt.lineSpacing = 1.2f;
-            welcomeTxt.alignment = TextAnchor.UpperLeft;
-            welcomeTxt.color = new Color(0.12f, 0.12f, 0.12f, 1f); // Тёмный, легко читаемый цвет
-            welcomeTxt.horizontalOverflow = HorizontalWrapMode.Wrap;
-            welcomeTxt.verticalOverflow = VerticalWrapMode.Overflow;
-            welcomeTxt.text =
-                "Поздравляем с приёмом на работу стажёром-лаборантом! Вот ваше рабочее место.\n" +
-                "Кликните на мешок с семенами, чтобы получить обычное семечко... Ниже краткое руководство:";
-            welcomeObj.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-            // 5 Clear, high-contrast, black-text cards without smudged bolding
             AddStepItem(contentObj.transform, font,
                 "1. МЕШОК С СЕМЕНАМИ (слева на столе)",
                 "Кликните на мешок, чтобы получить базовое белое семя. Брать семена можно в любой момент без ограничений и сразу нести в инкубатор.");
@@ -301,6 +316,17 @@ namespace GardenMerger.UI
             AddStepItem(contentObj.transform, font,
                 "4. ПОЛЕВОЙ ЖУРНАЛ БОТАНИКА (книга на столе)",
                 "Кликните по книге на столе, чтобы изучить список открытых формул скрещивания, задачи и историю зафиксированных фенотипов.");
+
+            _bodyScrollRect.viewport = viewportRt;
+            _bodyScrollRect.content = contentRt;
+            _bodyScrollRect.horizontal = false;
+            _bodyScrollRect.vertical = true;
+            _bodyScrollRect.movementType = ScrollRect.MovementType.Clamped;
+            _bodyScrollRect.scrollSensitivity = 35f;
+            _bodyScrollRect.verticalScrollbar = scrollbar;
+            _bodyScrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+            _bodyScrollRect.verticalScrollbarSpacing = 5f;
+
 
             AddStepItem(contentObj.transform, font,
                 "5. НАУЧНЫЕ ЗАДАНИЯ (панель справа вверху)",
@@ -358,41 +384,54 @@ namespace GardenMerger.UI
 
         private static void AddStepItem(Transform parent, Font font, string title, string description)
         {
-            var itemObj = new GameObject("StepItem", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Outline), typeof(ContentSizeFitter));
+            var itemObj = new GameObject(
+                "StepItem",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image),
+                typeof(ContentSizeFitter),
+                typeof(VerticalLayoutGroup),
+                typeof(LayoutElement),
+                typeof(Outline));
             itemObj.transform.SetParent(parent, false);
 
             var img = itemObj.GetComponent<Image>();
-            img.color = new Color(1f, 1f, 1f, 1f); // Белая чистая плашка
+            img.color = Color.white;
 
             var outline = itemObj.GetComponent<Outline>();
             outline.effectColor = new Color(0.80f, 0.83f, 0.82f, 1f);
             outline.effectDistance = new Vector2(1f, -1f);
 
-            var textObj = new GameObject("Text", typeof(RectTransform), typeof(Text));
+            var itemLayout = itemObj.GetComponent<VerticalLayoutGroup>();
+            itemLayout.padding = new RectOffset(16, 16, 12, 12);
+            itemLayout.childAlignment = TextAnchor.UpperLeft;
+            itemLayout.childControlWidth = true;
+            itemLayout.childControlHeight = true;
+            itemLayout.childForceExpandWidth = true;
+            itemLayout.childForceExpandHeight = false;
+
+            itemObj.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            itemObj.GetComponent<LayoutElement>().minHeight = 60f;
+
+            var textObj = new GameObject("Text", typeof(RectTransform), typeof(Text), typeof(ContentSizeFitter), typeof(LayoutElement));
             textObj.transform.SetParent(itemObj.transform, false);
-            var textRt = textObj.GetComponent<RectTransform>();
-            textRt.anchorMin = Vector2.zero;
-            textRt.anchorMax = Vector2.one;
-            textRt.offsetMin = new Vector2(16f, 10f);
-            textRt.offsetMax = new Vector2(-16f, -10f);
 
             var txt = textObj.GetComponent<Text>();
             txt.font = font;
-            txt.fontSize = 15;
+            txt.fontSize = 17;
             txt.fontStyle = FontStyle.Normal;
             txt.lineSpacing = 1.2f;
             txt.alignment = TextAnchor.UpperLeft;
-            txt.supportRichText = false; // Отключаем теги для безупречной резкости пиксельного шрифта
+            txt.supportRichText = true;
             txt.horizontalOverflow = HorizontalWrapMode.Wrap;
             txt.verticalOverflow = VerticalWrapMode.Overflow;
-            txt.color = new Color(0.08f, 0.08f, 0.08f, 1f); // Чистый тёмный графитовый цвет
-            txt.text = $"{title}\n{description}";
+            txt.color = new Color(0.08f, 0.08f, 0.08f, 1f);
+            txt.text = string.IsNullOrWhiteSpace(title) ? description : $"<b>{title}</b>\n{description}";
 
-            var fitter = itemObj.GetComponent<ContentSizeFitter>();
-            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-            var le = itemObj.AddComponent<LayoutElement>();
-            le.minHeight = 60f;
+            var textFitter = textObj.GetComponent<ContentSizeFitter>();
+            textFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var textLayout = textObj.GetComponent<LayoutElement>();
+            textLayout.minHeight = txt.fontSize * txt.lineSpacing;
         }
 
         public void Show()
@@ -422,6 +461,7 @@ namespace GardenMerger.UI
         private IEnumerator ShowRoutine()
         {
             _backdropRoot.SetActive(true);
+            RefreshBodyLayout();
             if (_canvasGroup != null) _canvasGroup.alpha = 0f;
             if (_cardRect != null) _cardRect.localScale = Vector3.one * 0.90f;
 
@@ -442,6 +482,24 @@ namespace GardenMerger.UI
             if (_canvasGroup != null) _canvasGroup.alpha = 1f;
             if (_cardRect != null) _cardRect.localScale = Vector3.one;
             _animRoutine = null;
+        }
+
+        private void RefreshBodyLayout()
+        {
+            if (_bodyContent == null || _bodyScrollRect == null)
+            {
+                return;
+            }
+
+            Canvas.ForceUpdateCanvases();
+            RectTransform[] elements = _bodyContent.GetComponentsInChildren<RectTransform>(true);
+            for (int i = elements.Length - 1; i >= 0; i--)
+            {
+                LayoutRebuilder.ForceRebuildLayoutImmediate(elements[i]);
+            }
+
+            Canvas.ForceUpdateCanvases();
+            _bodyScrollRect.verticalNormalizedPosition = 1f;
         }
 
         private IEnumerator HideRoutine()

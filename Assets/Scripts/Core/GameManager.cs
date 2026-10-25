@@ -94,6 +94,7 @@ namespace GardenMerger.Core
 
             ResolveLegacyBootstrapData();
 
+            GameTextStyle.ApplyToScene(gameObject.scene);
             SetupCamera();
             BindSceneObjects();
             WireGameEvents();
@@ -584,6 +585,7 @@ namespace GardenMerger.Core
             labelObj.transform.SetParent(lever.transform, false);
             labelObj.transform.localPosition = new Vector3(0f, 0.75f, -0.05f);
             var tm = labelObj.AddComponent<TextMesh>();
+            tm.font = GameTextStyle.ReadableFont;
             tm.text = text;
             tm.fontSize = 24;
             tm.characterSize = 0.042f;

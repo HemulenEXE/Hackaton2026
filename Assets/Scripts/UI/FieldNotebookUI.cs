@@ -173,7 +173,7 @@ namespace GardenMerger.UI
             }
             else
             {
-                entries.Append($"<color=#706A5E>??? + ??? → {result.DisplayName} ({result.BotanicalName})</color>\n");
+                entries.Append($"<color=#514B40>??? + ??? → {result.DisplayName} ({result.BotanicalName})</color>\n");
             }
         }
 
@@ -203,22 +203,22 @@ namespace GardenMerger.UI
 
                 if (i < currentOrderIndex || (campaignWon && i == currentOrderIndex))
                 {
-                    entries.Append("<color=#15803D><b>✓ ЭТАП #").Append(order.OrderId).Append(": ").Append(order.ClientTitle).Append(" [ИЗУЧЕНО]</b></color>\n")
+                    entries.Append("<color=#15803D><b>ЭТАП #").Append(order.OrderId).Append(": ").Append(order.ClientTitle).Append(" [ИЗУЧЕНО]</b></color>\n")
                         .Append("<color=#475569>Вид: ").Append(target.DisplayName).Append(" (").Append(target.BotanicalName).Append(")")
                         .Append(" · Форма: ").Append(formName).Append("</color>\n\n");
                 }
                 else if (i == currentOrderIndex)
                 {
-                    entries.Append("<color=#B45309><b>★ ТЕКУЩИЙ ЭТАП #").Append(order.OrderId).Append(": ").Append(order.ClientTitle).Append(" ★</b></color>\n")
-                        .Append("🎯 <b>Целевой вид:</b> <color=#0F766E><b>").Append(target.DisplayName).Append("</b></color> (").Append(target.BotanicalName).Append(")\n")
-                        .Append("🌸 <b>Требуемая форма:</b> <b>").Append(formName).Append("</b>\n")
-                        .Append("📋 <b>Методика:</b> ").Append(clearInstruction).Append("\n")
-                        .Append("📥 <b>Фиксация:</b> Результат автоматически заносится в дневник при получении цветка.\n\n");
+                    entries.Append("<color=#8A4B08><b>ТЕКУЩИЙ ЭТАП #").Append(order.OrderId).Append(": ").Append(order.ClientTitle).Append("</b></color>\n")
+                        .Append("<b>Целевой вид:</b> <color=#0F766E><b>").Append(target.DisplayName).Append("</b></color> (").Append(target.BotanicalName).Append(")\n")
+                        .Append("<b>Требуемая форма:</b> <b>").Append(formName).Append("</b>\n")
+                        .Append("<b>Методика:</b> ").Append(clearInstruction).Append("\n")
+                        .Append("<b>Запись:</b> Результат автоматически заносится в дневник при получении цветка.\n\n");
                 }
                 else
                 {
-                    entries.Append("<color=#64748B><b>⏳ ЭТАП #").Append(order.OrderId).Append(": ").Append(order.ClientTitle).Append(" [В ПЛАНЕ]</b></color>\n")
-                        .Append("<color=#94A3B8>Вид: ").Append(target.DisplayName).Append(" (").Append(target.BotanicalName).Append(")")
+                    entries.Append("<color=#514B40><b>ЭТАП #").Append(order.OrderId).Append(": ").Append(order.ClientTitle).Append(" [В ПЛАНЕ]</b></color>\n")
+                        .Append("<color=#514B40>Вид: ").Append(target.DisplayName).Append(" (").Append(target.BotanicalName).Append(")")
                         .Append(" · Форма: ").Append(formName).Append("</color>\n\n");
                 }
             }
@@ -228,10 +228,21 @@ namespace GardenMerger.UI
 
         private void ConfigureJournalText()
         {
+            Font readableFont = GameTextStyle.ReadableFont;
+            if (_panelRoot != null && readableFont != null)
+            {
+                foreach (Text text in _panelRoot.GetComponentsInChildren<Text>(true))
+                {
+                    text.font = readableFont;
+                }
+            }
+
             ConfigureText(_titleText, 30, new Color(0.09f, 0.12f, 0.10f));
-            ConfigureText(_ordersListText, 18, new Color(0.09f, 0.12f, 0.10f));
-            ConfigureText(_recipesListText, 18, new Color(0.09f, 0.12f, 0.10f));
-            ConfigureText(_recipesCounterText, 19, new Color(0.09f, 0.12f, 0.10f));
+            ConfigureText(_ordersListText, 19, new Color(0.09f, 0.12f, 0.10f));
+            ConfigureText(_recipesListText, 19, new Color(0.09f, 0.12f, 0.10f));
+            ConfigureText(_recipesCounterText, 20, new Color(0.09f, 0.12f, 0.10f));
+            if (_titleText != null) _titleText.fontStyle = FontStyle.Bold;
+            if (_recipesCounterText != null) _recipesCounterText.fontStyle = FontStyle.Bold;
         }
 
         private static void ConfigureText(Text text, int fontSize, Color color)

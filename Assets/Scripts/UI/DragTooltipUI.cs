@@ -1,10 +1,55 @@
 using System;
 using GardenMerger.Tabletop;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace GardenMerger.UI
 {
+    public static class GameTextStyle
+    {
+        private static Font _readableFont;
+
+        public static Font ReadableFont
+        {
+            get
+            {
+                if (_readableFont == null)
+                {
+                    _readableFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                }
+
+                return _readableFont;
+            }
+        }
+
+        public static void ApplyToScene(Scene scene)
+        {
+            Font font = ReadableFont;
+            if (font == null)
+            {
+                Debug.LogError("Could not load the built-in readable game font.");
+                return;
+            }
+
+            foreach (Text text in UnityEngine.Object.FindObjectsByType<Text>(FindObjectsInactive.Include))
+            {
+                if (text.gameObject.scene == scene)
+                {
+                    text.font = font;
+                }
+            }
+
+            foreach (TextMesh text in UnityEngine.Object.FindObjectsByType<TextMesh>(FindObjectsInactive.Include))
+            {
+                if (text.gameObject.scene == scene)
+                {
+                    text.font = font;
+                }
+            }
+        }
+    }
+
     /// <summary>
     /// Отображает красивую, четкую плашку с информацией о цветке или семечке
     /// прямо над перетаскиваемым объектом на игровом столе.
@@ -27,9 +72,6 @@ namespace GardenMerger.UI
         private Text _subtitleText;
 
         private float _currentAlpha = 0f;
-        private float _scaleProgress = 0f;
-        private bool _isFirstFrame = true;
-        private DraggableItem _lastItem;
 
         public static void EnsureInstance()
         {
@@ -101,7 +143,7 @@ namespace GardenMerger.UI
             _rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
             _rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
             _rectTransform.pivot = new Vector2(0.5f, 0f);
-            _rectTransform.sizeDelta = new Vector2(420f, 62f);
+            _rectTransform.sizeDelta = new Vector2(480f, 72f);
 
             _canvasGroup = GetComponent<CanvasGroup>();
             if (_canvasGroup == null) _canvasGroup = gameObject.AddComponent<CanvasGroup>();
@@ -121,12 +163,7 @@ namespace GardenMerger.UI
             _bgShadow.effectColor = new Color(0f, 0f, 0f, 0.75f);
             _bgShadow.effectDistance = new Vector2(0f, -5f);
 
-            Font customFont = null;
-            var anyText = FindFirstObjectByType<Text>();
-            if (anyText != null && anyText.font != null)
-            {
-                customFont = anyText.font;
-            }
+            Font readableFont = GameTextStyle.ReadableFont;
 
             // Swatch Container
             var swatchObj = transform.Find("Swatch");
@@ -163,15 +200,15 @@ namespace GardenMerger.UI
             titleRect.anchorMin = new Vector2(0f, 0.5f);
             titleRect.anchorMax = new Vector2(0f, 0.5f);
             titleRect.pivot = new Vector2(0f, 0.5f);
-            titleRect.anchoredPosition = new Vector2(50f, 11f);
-            titleRect.sizeDelta = new Vector2(356f, 26f);
+            titleRect.anchoredPosition = new Vector2(50f, 13f);
+            titleRect.sizeDelta = new Vector2(416f, 28f);
 
             _titleText = titleObj.GetComponent<Text>();
             _titleText.supportRichText = true;
-            _titleText.fontSize = 18;
+            _titleText.fontSize = 19;
             _titleText.fontStyle = FontStyle.Bold;
             _titleText.alignment = TextAnchor.MiddleLeft;
-            if (customFont != null) _titleText.font = customFont;
+            if (readableFont != null) _titleText.font = readableFont;
 
             var titleOutline = titleObj.GetComponent<Outline>();
             if (titleOutline != null)
@@ -192,16 +229,16 @@ namespace GardenMerger.UI
             subRect.anchorMin = new Vector2(0f, 0.5f);
             subRect.anchorMax = new Vector2(0f, 0.5f);
             subRect.pivot = new Vector2(0f, 0.5f);
-            subRect.anchoredPosition = new Vector2(50f, -12f);
-            subRect.sizeDelta = new Vector2(356f, 24f);
+            subRect.anchoredPosition = new Vector2(50f, -15f);
+            subRect.sizeDelta = new Vector2(416f, 28f);
 
             _subtitleText = subObj.GetComponent<Text>();
             _subtitleText.supportRichText = true;
-            _subtitleText.fontSize = 15;
+            _subtitleText.fontSize = 16;
             _subtitleText.fontStyle = FontStyle.Normal;
             _subtitleText.alignment = TextAnchor.MiddleLeft;
             _subtitleText.color = new Color(0.90f, 0.94f, 0.96f, 1f);
-            if (customFont != null) _subtitleText.font = customFont;
+            if (readableFont != null) _subtitleText.font = readableFont;
 
             var subShadow = subObj.GetComponent<Shadow>();
             if (subShadow != null)
@@ -224,13 +261,6 @@ namespace GardenMerger.UI
 
             if (item != null && item.IsDragging && item.gameObject.activeInHierarchy && _mainCamera != null && _canvasRect != null)
             {
-                if (_lastItem != item)
-                {
-                    _lastItem = item;
-                    _isFirstFrame = true;
-                    _scaleProgress = 0f;
-                }
-
                 if (_titleText != null) _titleText.text = item.GetDragTitle();
                 if (_subtitleText != null) _subtitleText.text = item.GetDragSubtitle();
 
@@ -251,37 +281,18 @@ namespace GardenMerger.UI
 
                 localPos.x = Mathf.Clamp(localPos.x, minX, maxX);
                 localPos.y = Mathf.Clamp(localPos.y, minY, maxY);
-
-                if (_isFirstFrame)
-                {
-                    _rectTransform.anchoredPosition = localPos;
-                    _isFirstFrame = false;
-                }
-                else
-                {
-                    _rectTransform.anchoredPosition = Vector2.Lerp(_rectTransform.anchoredPosition, localPos, Time.deltaTime * 26f);
-                }
+                _rectTransform.anchoredPosition = new Vector2(Mathf.Round(localPos.x), Mathf.Round(localPos.y));
 
                 _currentAlpha = Mathf.MoveTowards(_currentAlpha, 1f, Time.deltaTime * 9f);
-                _scaleProgress = Mathf.Clamp01(_scaleProgress + Time.deltaTime * 7.5f);
-
-                float scale = (_scaleProgress < 0.65f)
-                    ? Mathf.Lerp(0.70f, 1.08f, _scaleProgress / 0.65f)
-                    : Mathf.Lerp(1.08f, 1.0f, (_scaleProgress - 0.65f) / 0.35f);
-
-                _rectTransform.localScale = Vector3.one * scale;
+                _rectTransform.localScale = Vector3.one;
                 if (_canvasGroup != null) _canvasGroup.alpha = _currentAlpha;
             }
             else
             {
-                _lastItem = null;
-                _isFirstFrame = true;
-
                 if (_currentAlpha > 0f)
                 {
                     _currentAlpha = Mathf.MoveTowards(_currentAlpha, 0f, Time.deltaTime * 10f);
                     if (_canvasGroup != null) _canvasGroup.alpha = _currentAlpha;
-                    _rectTransform.localScale = Vector3.Lerp(_rectTransform.localScale, Vector3.one * 0.8f, Time.deltaTime * 10f);
                 }
             }
         }
