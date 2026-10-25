@@ -7723,7 +7723,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 17d0517bae670fb48bfab6fb549150eb, type: 2}
   - {fileID: 11400000, guid: e80a82d6194006a459d8442d6dbfcf39, type: 2}
   - {fileID: 11400000, guid: e84311e4665b7a340b574950e936913f, type: 2}
-  _temperatureLeverSprites: []
+  _temperatureLeverSprites:
+  - {fileID: 2520222459499979073, guid: ced734974ab3a7847921ab8ae94efbf9, type: 3}
+  - {fileID: -125975968, guid: ced734974ab3a7847921ab8ae94efbf9, type: 3}
+  - {fileID: -1452657419, guid: ced734974ab3a7847921ab8ae94efbf9, type: 3}
   _flowerFormSprites:
   - {fileID: -3119211596885191611, guid: 95acdf97d2537094e81cbae60e650303, type: 3}
   - {fileID: -722653253425329765, guid: 1ee3a3aea9e5a06469d0575879f16902, type: 3}

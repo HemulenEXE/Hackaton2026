@@ -670,7 +670,7 @@ namespace GardenMerger.Core
             }
 
 #if UNITY_EDITOR
-            var editorSprites = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/Sprites/Тумблер_анимация.png")
+            var editorSprites = UnityEditor.AssetDatabase.LoadAllAssetsAtPath("Assets/Sprites/Исправленные/Тумблер_анимация.png")
                 .OfType<Sprite>()
                 .OrderBy(s => s.name)
                 .ToArray();
@@ -681,18 +681,9 @@ namespace GardenMerger.Core
             }
 #endif
 
-            if (leverRenderer != null && leverRenderer.sprite != null && leverRenderer.sprite.texture != null)
-            {
-                var tex = leverRenderer.sprite.texture;
-                _temperatureLeverSprites = new Sprite[3]
-                {
-                    Sprite.Create(tex, new Rect(2f, 0f, 11f, 11f), Vector2.zero, 16f),
-                    Sprite.Create(tex, new Rect(18f, 2f, 11f, 9f), Vector2.zero, 16f),
-                    Sprite.Create(tex, new Rect(34f, 2f, 11f, 11f), Vector2.zero, 16f)
-                };
-                return _temperatureLeverSprites;
-            }
-
+            Debug.LogWarning(
+                "[GameManager] Temperature lever frames are not assigned. Lever sprites will remain unchanged; assign the three sliced sprites to _temperatureLeverSprites.",
+                this);
             return null;
         }
 
