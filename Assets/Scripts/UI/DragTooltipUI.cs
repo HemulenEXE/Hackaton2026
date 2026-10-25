@@ -14,6 +14,37 @@ namespace GardenMerger.UI
         {
             get
             {
+                if (_readableFont != null) return _readableFont;
+
+#if UNITY_EDITOR
+                _readableFont = UnityEditor.AssetDatabase.LoadAssetAtPath<Font>("Assets/Fonts/BarlowCondensed-Medium.otf");
+#endif
+
+                if (_readableFont == null)
+                {
+                    var allFonts = Resources.FindObjectsOfTypeAll<Font>();
+                    foreach (var f in allFonts)
+                    {
+                        if (f != null && f.name.IndexOf("Barlow", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            _readableFont = f;
+                            break;
+                        }
+                    }
+                }
+
+                if (_readableFont == null)
+                {
+                    foreach (Text text in UnityEngine.Object.FindObjectsByType<Text>(FindObjectsInactive.Include))
+                    {
+                        if (text != null && text.font != null && text.font.name.IndexOf("Barlow", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            _readableFont = text.font;
+                            break;
+                        }
+                    }
+                }
+
                 if (_readableFont == null)
                 {
                     _readableFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
@@ -28,7 +59,7 @@ namespace GardenMerger.UI
             Font font = ReadableFont;
             if (font == null)
             {
-                Debug.LogError("Could not load the built-in readable game font.");
+                Debug.LogError("Could not load the readable game font.");
                 return;
             }
 
@@ -45,6 +76,11 @@ namespace GardenMerger.UI
                 if (text.gameObject.scene == scene)
                 {
                     text.font = font;
+                    var mr = text.GetComponent<MeshRenderer>();
+                    if (mr != null && font.material != null)
+                    {
+                        mr.material = font.material;
+                    }
                 }
             }
         }
