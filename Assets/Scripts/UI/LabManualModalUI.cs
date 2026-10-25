@@ -10,7 +10,6 @@ namespace GardenMerger.UI
         private GameObject _backdropRoot;
         private RectTransform _cardRect;
         private CanvasGroup _canvasGroup;
-        private Button _closeCrossButton;
         private Button _bottomConfirmButton;
         private Button _cornerHelpButton;
         private AudioClip _clickSound;
@@ -73,19 +72,19 @@ namespace GardenMerger.UI
             rt.anchorMin = new Vector2(0f, 1f);
             rt.anchorMax = new Vector2(0f, 1f);
             rt.pivot = new Vector2(0f, 1f);
-            rt.anchoredPosition = new Vector2(26f, -26f);
-            rt.sizeDelta = new Vector2(56f, 56f);
+            rt.anchoredPosition = new Vector2(30f, -30f);
+            rt.sizeDelta = new Vector2(50f, 50f);
 
             var img = btnObj.GetComponent<Image>();
-            img.color = new Color(0.04f, 0.09f, 0.12f, 0.94f);
+            img.color = new Color(0.96f, 0.95f, 0.92f, 1f);
 
             var outline = btnObj.GetComponent<Outline>();
-            outline.effectColor = new Color(0.12f, 0.72f, 0.52f, 0.95f);
-            outline.effectDistance = new Vector2(2f, -2f);
+            outline.effectColor = new Color(0.12f, 0.35f, 0.25f, 1f);
+            outline.effectDistance = new Vector2(1.5f, -1.5f);
 
             var shadow = btnObj.AddComponent<Shadow>();
-            shadow.effectColor = new Color(0f, 0f, 0f, 0.75f);
-            shadow.effectDistance = new Vector2(0f, -4f);
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.40f);
+            shadow.effectDistance = new Vector2(0f, -2f);
 
             var textObj = new GameObject("Icon", typeof(RectTransform), typeof(Text));
             textObj.transform.SetParent(btnObj.transform, false);
@@ -98,13 +97,12 @@ namespace GardenMerger.UI
             var txt = textObj.GetComponent<Text>();
             txt.font = font;
             txt.text = "?";
-            txt.fontSize = 34;
-            txt.fontStyle = FontStyle.Bold;
+            txt.fontSize = 28;
+            txt.fontStyle = FontStyle.Normal;
             txt.alignment = TextAnchor.MiddleCenter;
-            txt.color = new Color(0.99f, 0.82f, 0.32f, 1f);
+            txt.color = new Color(0.08f, 0.30f, 0.20f, 1f);
             txt.raycastTarget = false;
 
-            // Small badge text under the button: "СПРАВКА"
             var labelObj = new GameObject("Label", typeof(RectTransform), typeof(Text));
             labelObj.transform.SetParent(btnObj.transform, false);
             var labelRt = labelObj.GetComponent<RectTransform>();
@@ -112,21 +110,25 @@ namespace GardenMerger.UI
             labelRt.anchorMax = new Vector2(0.5f, 0f);
             labelRt.pivot = new Vector2(0.5f, 1f);
             labelRt.anchoredPosition = new Vector2(0f, -3f);
-            labelRt.sizeDelta = new Vector2(70f, 18f);
+            labelRt.sizeDelta = new Vector2(80f, 18f);
 
             var labelTxt = labelObj.GetComponent<Text>();
             labelTxt.font = font;
             labelTxt.text = "СПРАВКА";
             labelTxt.fontSize = 11;
+            labelTxt.fontStyle = FontStyle.Normal;
             labelTxt.alignment = TextAnchor.MiddleCenter;
-            labelTxt.color = new Color(0.70f, 0.82f, 0.88f, 0.90f);
+            labelTxt.color = Color.white;
+            var labelOutline = labelObj.AddComponent<Outline>();
+            labelOutline.effectColor = Color.black;
+            labelOutline.effectDistance = new Vector2(1f, -1f);
             labelTxt.raycastTarget = false;
 
             _cornerHelpButton = btnObj.GetComponent<Button>();
             var colors = _cornerHelpButton.colors;
             colors.normalColor = Color.white;
-            colors.highlightedColor = new Color(1.2f, 1.2f, 1.2f, 1f);
-            colors.pressedColor = new Color(0.85f, 0.85f, 0.85f, 1f);
+            colors.highlightedColor = new Color(0.90f, 1f, 0.92f, 1f);
+            colors.pressedColor = new Color(0.80f, 0.90f, 0.85f, 1f);
             _cornerHelpButton.colors = colors;
 
             _cornerHelpButton.onClick.AddListener(() =>
@@ -138,8 +140,8 @@ namespace GardenMerger.UI
 
         private void BuildModalWindow(Transform canvasTransform, Font font)
         {
-            // Fullscreen backdrop blocker
-            _backdropRoot = new GameObject("LabManualBackdrop", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(CanvasGroup));
+            // Fullscreen backdrop (clicks outside card close modal)
+            _backdropRoot = new GameObject("LabManualBackdrop", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(CanvasGroup), typeof(Button));
             _backdropRoot.transform.SetParent(canvasTransform, false);
             _backdropRoot.transform.SetAsLastSibling();
 
@@ -150,11 +152,19 @@ namespace GardenMerger.UI
             backdropRt.offsetMax = Vector2.zero;
 
             var backdropImg = _backdropRoot.GetComponent<Image>();
-            backdropImg.color = new Color(0.02f, 0.04f, 0.07f, 0.84f);
+            backdropImg.color = new Color(0f, 0f, 0f, 0.70f);
 
             _canvasGroup = _backdropRoot.GetComponent<CanvasGroup>();
 
-            // Modal Card Container (980 x 760)
+            var backdropBtn = _backdropRoot.GetComponent<Button>();
+            backdropBtn.transition = Selectable.Transition.None;
+            backdropBtn.onClick.AddListener(() =>
+            {
+                PlaySound();
+                Hide();
+            });
+
+            // Modal Card Container - 100% OPAQUE LIGHT BACKGROUND, FITS NICELY ON SCREEN
             var cardObj = new GameObject("ModalCard", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Outline), typeof(Shadow));
             cardObj.transform.SetParent(_backdropRoot.transform, false);
 
@@ -163,18 +173,22 @@ namespace GardenMerger.UI
             _cardRect.anchorMax = new Vector2(0.5f, 0.5f);
             _cardRect.pivot = new Vector2(0.5f, 0.5f);
             _cardRect.anchoredPosition = Vector2.zero;
-            _cardRect.sizeDelta = new Vector2(980f, 760f);
+            _cardRect.sizeDelta = new Vector2(920f, 620f);
+
+            // Prevent clicks inside card from bubbling to backdrop
+            var cardBlocker = cardObj.AddComponent<Button>();
+            cardBlocker.transition = Selectable.Transition.None;
 
             var cardImg = cardObj.GetComponent<Image>();
-            cardImg.color = new Color(0.05f, 0.09f, 0.12f, 0.98f);
+            cardImg.color = new Color(0.97f, 0.96f, 0.94f, 1f); // 100% непрозрачный светлый фон
 
             var cardOutline = cardObj.GetComponent<Outline>();
-            cardOutline.effectColor = new Color(0.08f, 0.65f, 0.48f, 0.90f);
+            cardOutline.effectColor = new Color(0.12f, 0.28f, 0.20f, 1f);
             cardOutline.effectDistance = new Vector2(2f, -2f);
 
             var cardShadow = cardObj.GetComponent<Shadow>();
-            cardShadow.effectColor = new Color(0f, 0f, 0f, 0.85f);
-            cardShadow.effectDistance = new Vector2(0f, -10f);
+            cardShadow.effectColor = new Color(0f, 0f, 0f, 0.50f);
+            cardShadow.effectDistance = new Vector2(0f, -8f);
 
             // Top accent bar
             var topBarObj = new GameObject("AccentBar", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
@@ -182,89 +196,36 @@ namespace GardenMerger.UI
             var topBarRt = topBarObj.GetComponent<RectTransform>();
             topBarRt.anchorMin = new Vector2(0f, 1f);
             topBarRt.anchorMax = new Vector2(1f, 1f);
-            topBarRt.pivot = new Vector2(0.5f, 1f);
-            topBarRt.anchoredPosition = Vector2.zero;
-            topBarRt.sizeDelta = new Vector2(0f, 5f);
-            topBarObj.GetComponent<Image>().color = new Color(0.20f, 0.82f, 0.60f, 1f);
+            topBarRt.offsetMin = new Vector2(0f, -5f);
+            topBarRt.offsetMax = new Vector2(0f, 0f);
+            topBarObj.GetComponent<Image>().color = new Color(0.10f, 0.52f, 0.36f, 1f);
 
-            // Close Cross Button '✕' in top-right corner
-            var closeBtnObj = new GameObject("CloseCrossButton", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Outline), typeof(Button));
-            closeBtnObj.transform.SetParent(cardObj.transform, false);
-            var closeRt = closeBtnObj.GetComponent<RectTransform>();
-            closeRt.anchorMin = new Vector2(1f, 1f);
-            closeRt.anchorMax = new Vector2(1f, 1f);
-            closeRt.pivot = new Vector2(1f, 1f);
-            closeRt.anchoredPosition = new Vector2(-20f, -18f);
-            closeRt.sizeDelta = new Vector2(44f, 44f);
-
-            var closeImg = closeBtnObj.GetComponent<Image>();
-            closeImg.color = new Color(0.12f, 0.18f, 0.22f, 0.95f);
-            var closeOutline = closeBtnObj.GetComponent<Outline>();
-            closeOutline.effectColor = new Color(0.90f, 0.32f, 0.38f, 0.80f);
-            closeOutline.effectDistance = new Vector2(1.5f, -1.5f);
-
-            var crossTextObj = new GameObject("CrossIcon", typeof(RectTransform), typeof(Text));
-            crossTextObj.transform.SetParent(closeBtnObj.transform, false);
-            var crossRt = crossTextObj.GetComponent<RectTransform>();
-            crossRt.anchorMin = Vector2.zero;
-            crossRt.anchorMax = Vector2.one;
-            crossRt.offsetMin = Vector2.zero;
-            crossRt.offsetMax = Vector2.zero;
-
-            var crossTxt = crossTextObj.GetComponent<Text>();
-            crossTxt.font = font;
-            crossTxt.text = "✕";
-            crossTxt.fontSize = 24;
-            crossTxt.fontStyle = FontStyle.Bold;
-            crossTxt.alignment = TextAnchor.MiddleCenter;
-            crossTxt.color = new Color(0.99f, 0.55f, 0.60f, 1f);
-            crossTxt.raycastTarget = false;
-
-            _closeCrossButton = closeBtnObj.GetComponent<Button>();
-            var closeColors = _closeCrossButton.colors;
-            closeColors.highlightedColor = new Color(0.85f, 0.20f, 0.28f, 1f);
-            closeColors.pressedColor = new Color(0.60f, 0.10f, 0.18f, 1f);
-            _closeCrossButton.colors = closeColors;
-
-            _closeCrossButton.onClick.AddListener(() =>
-            {
-                PlaySound();
-                Hide();
-            });
-
-            // Header: Tag + Title + Greeting
-            var headerObj = new GameObject("HeaderArea", typeof(RectTransform), typeof(Text));
+            // Header Title strictly contained in card
+            var headerObj = new GameObject("HeaderTitle", typeof(RectTransform), typeof(Text));
             headerObj.transform.SetParent(cardObj.transform, false);
             var headerRt = headerObj.GetComponent<RectTransform>();
             headerRt.anchorMin = new Vector2(0f, 1f);
             headerRt.anchorMax = new Vector2(1f, 1f);
             headerRt.pivot = new Vector2(0.5f, 1f);
-            headerRt.anchoredPosition = new Vector2(0f, -22f);
-            headerRt.sizeDelta = new Vector2(880f, 108f);
+            headerRt.anchoredPosition = new Vector2(0f, -14f);
+            headerRt.sizeDelta = new Vector2(-60f, 32f);
 
             var headerTxt = headerObj.GetComponent<Text>();
             headerTxt.font = font;
-            headerTxt.fontSize = 17;
-            headerTxt.lineSpacing = 1.15f;
-            headerTxt.alignment = TextAnchor.UpperLeft;
-            headerTxt.supportRichText = true;
-            headerTxt.horizontalOverflow = HorizontalWrapMode.Wrap;
-            headerTxt.verticalOverflow = VerticalWrapMode.Overflow;
-            headerTxt.text =
-                "<size=12><color=#34D399><b>● БОТАНИЧЕСКАЯ СТАНЦИЯ · ВВОДНЫЙ РЕГЛАМЕНТ ●</b></color></size>\n" +
-                "<size=23><color=#FFFFFF><b>ВВОДНЫЙ ИНСТРУКТАЖ СТАЖЁРА-ЛАБОРАНТА</b></color></size>\n" +
-                "<color=#E2E8F0><b>Поздравляем с приёмом на работу стажёром-лаборантом!</b> Вот ваше рабочее место ботанической станции. " +
-                "Ниже базовый порядок работы с оборудованием на столе:</color>";
+            headerTxt.fontSize = 20;
+            headerTxt.fontStyle = FontStyle.Normal;
+            headerTxt.alignment = TextAnchor.MiddleCenter;
+            headerTxt.color = new Color(0.08f, 0.20f, 0.14f, 1f);
+            headerTxt.text = "ВВОДНЫЙ ИНСТРУКТАЖ СТАЖЁРА-ЛАБОРАНТА";
 
-            // Instruction Body Scroll View
+            // Body ScrollView strictly contained in card
             var scrollObj = new GameObject("BodyScrollView", typeof(RectTransform), typeof(ScrollRect));
             scrollObj.transform.SetParent(cardObj.transform, false);
             var scrollRt = scrollObj.GetComponent<RectTransform>();
-            scrollRt.anchorMin = new Vector2(0f, 0f);
-            scrollRt.anchorMax = new Vector2(1f, 1f);
-            scrollRt.pivot = new Vector2(0.5f, 0.5f);
-            scrollRt.offsetMin = new Vector2(40f, 85f);
-            scrollRt.offsetMax = new Vector2(-40f, -140f);
+            scrollRt.anchorMin = Vector2.zero;
+            scrollRt.anchorMax = Vector2.one;
+            scrollRt.offsetMin = new Vector2(36f, 75f);
+            scrollRt.offsetMax = new Vector2(-36f, -52f);
 
             var scrollRect = scrollObj.GetComponent<ScrollRect>();
 
@@ -304,52 +265,62 @@ namespace GardenMerger.UI
             scrollRect.movementType = ScrollRect.MovementType.Clamped;
             scrollRect.scrollSensitivity = 35f;
 
-            // 5 Instructional Section Cards with Large, Readable Typography
-            AddInstructionCard(contentObj.transform, font,
-                "🌾 1. МЕШОК С СЕМЕНАМИ (слева стола)",
-                "#FBBF24",
-                "Кликните по холщовому мешку с семенами, чтобы получить обычное белое семя лилии.\n" +
-                "Новое семечко можно брать в любой момент без ограничений и сразу нести в инкубатор.");
+            // Welcome Text item
+            var welcomeObj = new GameObject("WelcomeText", typeof(RectTransform), typeof(Text), typeof(ContentSizeFitter));
+            welcomeObj.transform.SetParent(contentObj.transform, false);
+            var welcomeTxt = welcomeObj.GetComponent<Text>();
+            welcomeTxt.font = font;
+            welcomeTxt.fontSize = 15;
+            welcomeTxt.lineSpacing = 1.2f;
+            welcomeTxt.alignment = TextAnchor.UpperLeft;
+            welcomeTxt.color = new Color(0.12f, 0.12f, 0.12f, 1f); // Тёмный, легко читаемый цвет
+            welcomeTxt.horizontalOverflow = HorizontalWrapMode.Wrap;
+            welcomeTxt.verticalOverflow = VerticalWrapMode.Overflow;
+            welcomeTxt.text =
+                "Поздравляем с приёмом на работу стажёром-лаборантом! Вот ваше рабочее место.\n" +
+                "Кликните на мешок с семенами, чтобы получить обычное семечко... Ниже краткое руководство:";
+            welcomeObj.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            AddInstructionCard(contentObj.transform, font,
-                "🧪 2. ИНКУБАТОР ДЛЯ ПРОРАЩИВАНИЯ (по центру)",
-                "#38BDF8",
-                "Перетащите семя в слот инкубатора и выберите условия созревания:\n" +
-                "• <b>Тумблер «ТЕМПЕРАТУРА»(Красный)</b>: сдвигает оттенок цветка. <i>Холод</i> даёт синий цвет, <i>Тепло</i> — красный.\n" +
-                "• <b>Тумблер «ВЛАЖНОСТЬ»(Синий)</b>: управляет морфологией. <i>Влажно</i> развивает форму на 1 ступень вперёд, <i>Сухо</i> — на 1 ступень назад.\n" +
-                "• Нажмите <b>кнопку проращивания</b>, чтобы цветок распустился на лотке готовым образцом.");
+            // 5 Clear, high-contrast, black-text cards without smudged bolding
+            AddStepItem(contentObj.transform, font,
+                "1. МЕШОК С СЕМЕНАМИ (слева на столе)",
+                "Кликните на мешок, чтобы получить базовое белое семя. Брать семена можно в любой момент без ограничений и сразу нести в инкубатор.");
 
-            AddInstructionCard(contentObj.transform, font,
-                "🧬 3. СЕЛЕКТОР СКРЕЩИВАНИЯ (справа стола)",
-                "#34D399",
-                "Установите два выращенных цветка в чаши скрещивателя и нажмите зелёную кнопку синтеза.\n" +
-                "Вы получите гибридное семя нового окраса. <b>Форма будущего цветка наследуется от материнского (левого) растения!</b>");
+            AddStepItem(contentObj.transform, font,
+                "2. ИНКУБАТОР ДЛЯ ПРОРАЩИВАНИЯ (по центру)",
+                "Перетащите семя в слот инкубатора и настройте режим:\n" +
+                "• Тумблер «ТЕМП»: Холодно — синий цветок, Тепло — красный мак.\n" +
+                "• Тумблер «ВЛАЖН»: Влажно — развитие формы вперёд, Сухо — назад.\n" +
+                "Потяните рычаг проращивания, чтобы семя распустилось в готовый цветок на лотке.");
 
-            AddInstructionCard(contentObj.transform, font,
-                "📖 4. ПОЛЕВОЙ ЖУРНАЛ БОТАНИКА (книга на столе)",
-                "#A78BFA",
-                "Кликните по журналу на столе, чтобы изучить задачи ботаника, список открытых формул скрещивания, а также зафиксированные в опытах фенотипы.");
+            AddStepItem(contentObj.transform, font,
+                "3. СЕЛЕКТОР СКРЕЩИВАНИЯ (справа на столе)",
+                "Установите два цветка в чаши скрещивателя и нажмите зелёную кнопку синтеза.\n" +
+                "Форма гибрида наследуется от материнского (левого) цветка!");
 
-            AddInstructionCard(contentObj.transform, font,
-                "🎯 5. НАУЧНЫЕ ЗАДАНИЯ (панель справа вверху)",
-                "#F472B6",
-                "Выполняйте исследовательские этапы по очереди. Как только требуемый сорт цветка будет выращен, <b>этап сдаётся и заносится в дневник автоматически</b>!");
+            AddStepItem(contentObj.transform, font,
+                "4. ПОЛЕВОЙ ЖУРНАЛ БОТАНИКА (книга на столе)",
+                "Кликните по книге на столе, чтобы изучить список открытых формул скрещивания, задачи и историю зафиксированных фенотипов.");
 
-            // Bottom Confirm Button: "[ ПРИСТУПИТЬ К ИССЛЕДОВАНИЯМ ]"
+            AddStepItem(contentObj.transform, font,
+                "5. НАУЧНЫЕ ЗАДАНИЯ (панель справа вверху)",
+                "Выполняйте этапы по очереди. Как только требуемый сорт цветка будет получен, этап зачтётся и занесётся в дневник автоматически!");
+
+            // Bottom Confirm Button: "[ ПРИСТУПИТЬ К РАБОТЕ ]"
             var bottomBtnObj = new GameObject("ConfirmButton", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Outline), typeof(Button));
             bottomBtnObj.transform.SetParent(cardObj.transform, false);
             var bottomRt = bottomBtnObj.GetComponent<RectTransform>();
             bottomRt.anchorMin = new Vector2(0.5f, 0f);
             bottomRt.anchorMax = new Vector2(0.5f, 0f);
             bottomRt.pivot = new Vector2(0.5f, 0f);
-            bottomRt.anchoredPosition = new Vector2(0f, 20f);
-            bottomRt.sizeDelta = new Vector2(380f, 50f);
+            bottomRt.anchoredPosition = new Vector2(0f, 16f);
+            bottomRt.sizeDelta = new Vector2(340f, 48f);
 
             var bottomImg = bottomBtnObj.GetComponent<Image>();
-            bottomImg.color = new Color(0.05f, 0.58f, 0.40f, 1f);
+            bottomImg.color = new Color(0.08f, 0.46f, 0.32f, 1f); // Чёткий тёмно-изумрудный
 
             var bottomOutline = bottomBtnObj.GetComponent<Outline>();
-            bottomOutline.effectColor = new Color(0.20f, 0.88f, 0.65f, 0.90f);
+            bottomOutline.effectColor = new Color(0.15f, 0.65f, 0.45f, 1f);
             bottomOutline.effectDistance = new Vector2(1.5f, -1.5f);
 
             var bottomTextObj = new GameObject("ButtonText", typeof(RectTransform), typeof(Text));
@@ -362,17 +333,18 @@ namespace GardenMerger.UI
 
             var bTxt = bottomTextObj.GetComponent<Text>();
             bTxt.font = font;
-            bTxt.text = "ПРИСТУПИТЬ К ИССЛЕДОВАНИЯМ";
-            bTxt.fontSize = 17;
-            bTxt.fontStyle = FontStyle.Bold;
+            bTxt.text = "ПРИСТУПИТЬ К РАБОТЕ";
+            bTxt.fontSize = 16;
+            bTxt.fontStyle = FontStyle.Normal;
             bTxt.alignment = TextAnchor.MiddleCenter;
             bTxt.color = Color.white;
             bTxt.raycastTarget = false;
 
             _bottomConfirmButton = bottomBtnObj.GetComponent<Button>();
             var bColors = _bottomConfirmButton.colors;
-            bColors.highlightedColor = new Color(0.10f, 0.72f, 0.50f, 1f);
-            bColors.pressedColor = new Color(0.04f, 0.45f, 0.30f, 1f);
+            bColors.normalColor = Color.white;
+            bColors.highlightedColor = new Color(0.12f, 0.58f, 0.40f, 1f);
+            bColors.pressedColor = new Color(0.05f, 0.36f, 0.24f, 1f);
             _bottomConfirmButton.colors = bColors;
 
             _bottomConfirmButton.onClick.AddListener(() =>
@@ -384,20 +356,20 @@ namespace GardenMerger.UI
             _backdropRoot.SetActive(false);
         }
 
-        private static void AddInstructionCard(Transform parent, Font font, string title, string accentHex, string description)
+        private static void AddStepItem(Transform parent, Font font, string title, string description)
         {
-            var card = new GameObject("Card_" + title, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Outline));
-            card.transform.SetParent(parent, false);
+            var itemObj = new GameObject("StepItem", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Outline), typeof(ContentSizeFitter));
+            itemObj.transform.SetParent(parent, false);
 
-            var img = card.GetComponent<Image>();
-            img.color = new Color(0.03f, 0.06f, 0.09f, 0.85f);
+            var img = itemObj.GetComponent<Image>();
+            img.color = new Color(1f, 1f, 1f, 1f); // Белая чистая плашка
 
-            var outline = card.GetComponent<Outline>();
-            outline.effectColor = new Color(0.12f, 0.20f, 0.26f, 0.80f);
+            var outline = itemObj.GetComponent<Outline>();
+            outline.effectColor = new Color(0.80f, 0.83f, 0.82f, 1f);
             outline.effectDistance = new Vector2(1f, -1f);
 
             var textObj = new GameObject("Text", typeof(RectTransform), typeof(Text));
-            textObj.transform.SetParent(card.transform, false);
+            textObj.transform.SetParent(itemObj.transform, false);
             var textRt = textObj.GetComponent<RectTransform>();
             textRt.anchorMin = Vector2.zero;
             textRt.anchorMax = Vector2.one;
@@ -406,20 +378,21 @@ namespace GardenMerger.UI
 
             var txt = textObj.GetComponent<Text>();
             txt.font = font;
-            txt.fontSize = 16;
+            txt.fontSize = 15;
+            txt.fontStyle = FontStyle.Normal;
             txt.lineSpacing = 1.2f;
             txt.alignment = TextAnchor.UpperLeft;
-            txt.supportRichText = true;
+            txt.supportRichText = false; // Отключаем теги для безупречной резкости пиксельного шрифта
             txt.horizontalOverflow = HorizontalWrapMode.Wrap;
             txt.verticalOverflow = VerticalWrapMode.Overflow;
-            txt.color = new Color(0.92f, 0.95f, 0.98f, 1f);
-            txt.text = $"<color={accentHex}><b>{title}</b></color>\n{description}";
+            txt.color = new Color(0.08f, 0.08f, 0.08f, 1f); // Чистый тёмный графитовый цвет
+            txt.text = $"{title}\n{description}";
 
-            var fitter = card.AddComponent<ContentSizeFitter>();
+            var fitter = itemObj.GetComponent<ContentSizeFitter>();
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            var le = card.AddComponent<LayoutElement>();
-            le.minHeight = 72f;
+            var le = itemObj.AddComponent<LayoutElement>();
+            le.minHeight = 60f;
         }
 
         public void Show()
@@ -450,9 +423,9 @@ namespace GardenMerger.UI
         {
             _backdropRoot.SetActive(true);
             if (_canvasGroup != null) _canvasGroup.alpha = 0f;
-            if (_cardRect != null) _cardRect.localScale = Vector3.one * 0.85f;
+            if (_cardRect != null) _cardRect.localScale = Vector3.one * 0.90f;
 
-            float duration = 0.22f;
+            float duration = 0.20f;
             float elapsed = 0f;
 
             while (elapsed < duration)
@@ -462,7 +435,7 @@ namespace GardenMerger.UI
                 float ease = 1f - Mathf.Pow(1f - t, 3f);
 
                 if (_canvasGroup != null) _canvasGroup.alpha = t;
-                if (_cardRect != null) _cardRect.localScale = Vector3.LerpUnclamped(Vector3.one * 0.85f, Vector3.one, ease);
+                if (_cardRect != null) _cardRect.localScale = Vector3.LerpUnclamped(Vector3.one * 0.90f, Vector3.one, ease);
                 yield return null;
             }
 
@@ -473,7 +446,7 @@ namespace GardenMerger.UI
 
         private IEnumerator HideRoutine()
         {
-            float duration = 0.16f;
+            float duration = 0.15f;
             float elapsed = 0f;
 
             while (elapsed < duration)
@@ -482,7 +455,7 @@ namespace GardenMerger.UI
                 float t = Mathf.Clamp01(elapsed / duration);
 
                 if (_canvasGroup != null) _canvasGroup.alpha = 1f - t;
-                if (_cardRect != null) _cardRect.localScale = Vector3.Lerp(Vector3.one, Vector3.one * 0.90f, t);
+                if (_cardRect != null) _cardRect.localScale = Vector3.Lerp(Vector3.one, Vector3.one * 0.93f, t);
                 yield return null;
             }
 
