@@ -237,7 +237,7 @@ namespace GardenMerger.UI
                 }
             }
 
-            ConfigureText(_titleText, 30, new Color(0.09f, 0.12f, 0.10f));
+            ConfigureText(_titleText, _titleText.fontSize, new Color(0.09f, 0.12f, 0.10f));
             ConfigureText(_ordersListText, 19, new Color(0.09f, 0.12f, 0.10f));
             ConfigureText(_recipesListText, 19, new Color(0.09f, 0.12f, 0.10f));
             ConfigureText(_recipesCounterText, 20, new Color(0.09f, 0.12f, 0.10f));

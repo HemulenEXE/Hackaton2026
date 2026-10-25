@@ -788,13 +788,11 @@ namespace GardenMerger.Core
             var journalObject = FindJournalSceneObject();
             if (journalObject != null)
             {
-                var col = journalObject.GetComponent<BoxCollider2D>();
+                var col = journalObject.GetComponent<Collider2D>();
                 if (col == null)
                 {
                     col = journalObject.AddComponent<BoxCollider2D>();
                 }
-                col.offset = new Vector2(0.32f, 0.55f);
-                col.size = new Vector2(1.5f, 2.0f);
                 col.isTrigger = true;
 
                 var receiver = GetOrAddClickReceiver(journalObject);
