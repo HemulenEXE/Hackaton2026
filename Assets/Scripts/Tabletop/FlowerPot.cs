@@ -96,11 +96,11 @@ namespace GardenMerger.Tabletop
                 {
                     if (!order.RequiresFlowerForm || _form == order.TargetFlowerForm)
                     {
-                        return $"{baseInfo}  <color=#4ADE80><b>★ Цель заказа!</b></color>";
+                        return $"{baseInfo}  <color=#4ADE80><b>★ Целевой образец!</b></color>";
                     }
                     else
                     {
-                        return $"{baseInfo}  <color=#FBBF24><b>(Нужна: {order.TargetFlowerForm.ToDisplayName()})</b></color>";
+                        return $"{baseInfo}  <color=#FBBF24><b>(Требуется форма: {order.TargetFlowerForm.ToDisplayName()})</b></color>";
                     }
                 }
             }

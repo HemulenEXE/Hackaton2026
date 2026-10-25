@@ -55,7 +55,7 @@ namespace GardenMerger.UI
             if (_panelRoot != null) _panelRoot.SetActive(true);
             if (_statsText != null)
             {
-                _statsText.text = $"Все {ordersCompleted} королевских заказов выполнены!\nОткрыто формул в журнале: {recipesDiscovered} из {totalRecipes}.";
+                _statsText.text = $"Все {ordersCompleted} этапов исследования успешно завершены!\nОткрыто формул в дневнике: {recipesDiscovered} из {totalRecipes}.";
             }
         }
 

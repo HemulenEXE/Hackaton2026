@@ -49,6 +49,7 @@ namespace GardenMerger.Core
         private TabletopHUD _hud;
         private FieldNotebookUI _notebookUI;
         private VictoryModalUI _victoryModalUI;
+        private LabManualModalUI _manualModalUI;
         private IncubatorMachine _incubator;
         private CrossBreederMachine _crossBreeder;
         private WasteChute _wasteChute;
@@ -65,6 +66,7 @@ namespace GardenMerger.Core
         public TabletopHUD HUD => _hud;
         public IncubatorMachine Incubator => _incubator;
         public CrossBreederMachine CrossBreeder => _crossBreeder;
+        public LabManualModalUI ManualModal => _manualModalUI;
 
         public event Action<OrderConfigSO, int> OnOrderUpdated;
         public event Action<string, bool> OnRecipeDiscovered;
@@ -101,6 +103,8 @@ namespace GardenMerger.Core
             _isCampaignWon = false;
 
             NotifyOrderChanged();
+
+            _manualModalUI?.Show();
         }
 
         private void OnDestroy()
@@ -288,6 +292,12 @@ namespace GardenMerger.Core
                 _victoryModalUI.OnContinueSandbox += () => PlaySound(_clickSound);
             }
 
+            var canvasTransform = canvasObject != null ? canvasObject.transform : FindFirstObjectByType<Canvas>()?.transform;
+            if (canvasTransform != null)
+            {
+                _manualModalUI = LabManualModalUI.EnsureInstance(canvasTransform, _clickSound);
+            }
+
             return true;
         }
 
@@ -400,11 +410,188 @@ namespace GardenMerger.Core
 
             _incubator.OnTemperatureChanged += mode =>
             {
-                _notebookUI?.RecordObservation($"Температурный режим переключён: {GetTemperatureModeName(mode)}; оттенок изменяется без смены формы.");
                 UpdateVisuals(mode);
+
+                string tempName = GetTemperatureModeDisplayName(mode);
+                string humName = GetHumidityModeDisplayName(_incubator.CurrentHumidityMode);
+                string effectDesc = mode switch
+                {
+                    TemperatureMode.Warm => "Сдвиг оттенка в тёплую сторону (красный)",
+                    TemperatureMode.Cold => "Сдвиг оттенка в холодную сторону (синий)",
+                    _ => "Базовый оттенок цветка (без термо-сдвига)"
+                };
+
+                _notebookUI?.RecordObservation($"Температурный режим переключён: {GetTemperatureModeName(mode)}; {effectDesc}.");
+
+                _hud?.ShowBanner(
+                    $"ТЕМПЕРАТУРА: {tempName.ToUpper()}",
+                    $"{effectDesc}.  [Температура: <b>{tempName}</b> | Влажность: <b>{humName}</b>]",
+                    2.5f,
+                    BannerType.Info);
             };
 
             UpdateVisuals(_incubator.CurrentTemperatureMode);
+
+            EnsureControlHeader(leverObj, "ТЕМП", new Color(1f, 0.95f, 0.90f, 0.95f));
+
+            SetupHumidityControl(leverObj, indicatorObj, sprites);
+        }
+
+        private void SetupHumidityControl(GameObject tempLeverObj, GameObject tempIndicatorObj, Sprite[] sprites)
+        {
+            if (_incubator == null) return;
+
+            // Find or dynamically clone humidity lever object next to temperature lever
+            var humLeverObj = FindSceneObject("HumidityControl") ??
+                              FindSceneObject("HumidityLever") ??
+                              FindSceneObject("Тумблер_влажности");
+
+            if (humLeverObj == null && tempLeverObj != null)
+            {
+                humLeverObj = Instantiate(tempLeverObj, tempLeverObj.transform.parent);
+                humLeverObj.name = "HumidityControl";
+                humLeverObj.transform.localPosition = tempLeverObj.transform.localPosition + new Vector3(-1.15f, 0f, 0f);
+                humLeverObj.transform.localRotation = tempLeverObj.transform.localRotation;
+                humLeverObj.transform.localScale = tempLeverObj.transform.localScale;
+            }
+
+            // Find or dynamically clone humidity indicator lamp
+            var humIndicatorObj = FindSceneObject("HumidityIndicator") ??
+                                  FindSceneObject("Индикатор_влажности");
+
+            if (humIndicatorObj == null && tempIndicatorObj != null)
+            {
+                humIndicatorObj = Instantiate(tempIndicatorObj, tempIndicatorObj.transform.parent);
+                humIndicatorObj.name = "HumidityIndicator";
+                humIndicatorObj.transform.localPosition = tempIndicatorObj.transform.localPosition + new Vector3(-1.15f, 0f, 0f);
+                humIndicatorObj.transform.localRotation = tempIndicatorObj.transform.localRotation;
+                humIndicatorObj.transform.localScale = tempIndicatorObj.transform.localScale;
+            }
+
+            var humLeverRenderer = humLeverObj != null ? humLeverObj.GetComponent<SpriteRenderer>() : null;
+            var humIndicatorRenderer = humIndicatorObj != null ? humIndicatorObj.GetComponent<SpriteRenderer>() : null;
+            var humLabel = FindSceneComponent<TextMesh>("HumidityModeLabel");
+
+            EnsureControlHeader(humLeverObj, "ВЛАЖН", new Color(0.85f, 0.95f, 1f, 0.95f));
+
+            void UpdateVisuals(HumidityMode mode)
+            {
+                int spriteIndex = 1;
+                Color indColor = Color.white;
+                string labelStr = "НЕЙТРАЛЬНО";
+
+                switch (mode)
+                {
+                    case HumidityMode.Humid:
+                        spriteIndex = 2;
+                        indColor = new Color(0.20f, 0.75f, 1.0f); // Водно-голубой
+                        labelStr = "ВЛАЖНО";
+                        break;
+                    case HumidityMode.Dry:
+                        spriteIndex = 0;
+                        indColor = new Color(0.98f, 0.72f, 0.18f); // Тёплый янтарь
+                        labelStr = "СУХО";
+                        break;
+                    default:
+                        spriteIndex = 1;
+                        indColor = new Color(0.92f, 0.96f, 0.98f); // Мягкий нейтральный
+                        labelStr = "НЕЙТРАЛЬНО";
+                        break;
+                }
+
+                if (humLabel != null)
+                {
+                    humLabel.text = labelStr;
+                }
+
+                if (humLeverRenderer != null)
+                {
+                    if (sprites != null && spriteIndex < sprites.Length && sprites[spriteIndex] != null)
+                    {
+                        humLeverRenderer.sprite = sprites[spriteIndex];
+                    }
+                    humLeverRenderer.color = Color.white;
+                }
+
+                if (humIndicatorRenderer != null)
+                {
+                    humIndicatorRenderer.color = indColor;
+                }
+            }
+
+            if (humLeverObj != null)
+            {
+                var col = humLeverObj.GetComponent<Collider2D>();
+                if (col == null)
+                {
+                    var box = humLeverObj.AddComponent<BoxCollider2D>();
+                    box.size = new Vector2(1.2f, 1.2f);
+                    box.isTrigger = true;
+                }
+
+                var receiver = GetOrAddClickReceiver(humLeverObj);
+                receiver.OnClick = null;
+                receiver.OnClick += () =>
+                {
+                    PlaySound(_clickSound);
+                    _incubator.CycleHumidity();
+                };
+            }
+
+            if (humIndicatorObj != null && humIndicatorObj != humLeverObj)
+            {
+                var indReceiver = GetOrAddClickReceiver(humIndicatorObj);
+                indReceiver.OnClick = null;
+                indReceiver.OnClick += () =>
+                {
+                    PlaySound(_clickSound);
+                    _incubator.CycleHumidity();
+                };
+            }
+
+            _incubator.OnHumidityChanged += mode =>
+            {
+                UpdateVisuals(mode);
+
+                string humName = GetHumidityModeDisplayName(mode);
+                string tempName = GetTemperatureModeDisplayName(_incubator.CurrentTemperatureMode);
+                string effectDesc = mode switch
+                {
+                    HumidityMode.Humid => "Развитие формы: сдвиг на 1 ступень вперёд",
+                    HumidityMode.Dry => "Регресс формы: сдвиг на 1 ступень назад",
+                    _ => "Сохранение исходной формы цветка"
+                };
+
+                _notebookUI?.RecordObservation($"Режим влажности переключён: {GetHumidityModeName(mode)}; {effectDesc}.");
+
+                _hud?.ShowBanner(
+                    $"ВЛАЖНОСТЬ: {humName.ToUpper()}",
+                    $"{effectDesc}.  [Влажность: <b>{humName}</b> | Температура: <b>{tempName}</b>]",
+                    2.5f,
+                    BannerType.Info);
+            };
+
+            UpdateVisuals(_incubator.CurrentHumidityMode);
+        }
+
+        private static void EnsureControlHeader(GameObject lever, string text, Color color)
+        {
+            if (lever == null) return;
+            var existing = lever.transform.Find("HeaderLabel");
+            if (existing != null) return;
+
+            var labelObj = new GameObject("HeaderLabel");
+            labelObj.transform.SetParent(lever.transform, false);
+            labelObj.transform.localPosition = new Vector3(0f, 0.75f, -0.05f);
+            var tm = labelObj.AddComponent<TextMesh>();
+            tm.text = text;
+            tm.fontSize = 24;
+            tm.characterSize = 0.042f;
+            tm.anchor = TextAnchor.MiddleCenter;
+            tm.alignment = TextAlignment.Center;
+            tm.color = color;
+            var mr = labelObj.GetComponent<MeshRenderer>();
+            if (mr != null) mr.sortingOrder = 5;
         }
 
         private Sprite[] GetTemperatureLeverSprites(SpriteRenderer leverRenderer)
@@ -596,12 +783,6 @@ namespace GardenMerger.Core
                 _notebookUI?.RefreshUI();
             };
 
-            if (_incubator != null)
-            {
-                _incubator.OnHumidityChanged += mode =>
-                    _notebookUI?.RecordObservation($"Влажность переключена: {GetHumidityModeName(mode)}.");
-            }
-
             OnOrderCompleted += (order, isFinal) =>
             {
                 PlaySound(_orderCompletedSound);
@@ -610,12 +791,12 @@ namespace GardenMerger.Core
                     string form = order.RequiresFlowerForm
                         ? $" Форма «{order.TargetFlowerForm.ToDisplayName()}» подтверждена."
                         : string.Empty;
-                    _notebookUI?.RecordObservation($"Выполнен заказ №{order.OrderId} «{order.ClientTitle}».{form}");
+                    _notebookUI?.RecordObservation($"Изучен вид №{order.OrderId} «{order.ClientTitle}».{form}");
                 }
                 _notebookUI?.RefreshUI();
                 if (!isFinal && order != null)
                 {
-                    _hud?.ShowBanner($"Заказ #{order.OrderId} выполнен!", $"{order.ClientTitle} в восторге!");
+                    _hud?.ShowBanner($"Исследование #{order.OrderId} завершено!", $"Новый вид успешно выведен и описан в дневнике!");
                 }
             };
 
@@ -647,7 +828,12 @@ namespace GardenMerger.Core
                     string humidity = GetHumidityModeName(_incubator.CurrentHumidityMode);
                     _notebookUI?.RecordObservation(
                         $"Выращен цветок: {ColorRegistry.GetColor(colorId).DisplayName}, форма «{form.ToDisplayName()}»; температура — {temperature}, влажность — {humidity}.");
-                    _hud?.ShowBanner("Росток распустился!", $"Получен цветок: {ColorRegistry.GetColor(colorId).DisplayName}");
+
+                    // Автоматическая сдача заказа сразу при получении требуемого цветка
+                    if (!TrySubmitFlower(pot))
+                    {
+                        _hud?.ShowBanner("Росток распустился!", $"Получен цветок: {ColorRegistry.GetColor(colorId).DisplayName}");
+                    }
                 };
             }
 
@@ -770,11 +956,11 @@ namespace GardenMerger.Core
                     {
                         _hud?.ShowBanner(
                             "Нужна другая форма!",
-                            $"Заказчик просит: {CurrentOrder.TargetFlowerForm.ToDisplayName()}.");
+                            $"Для исследования требуется форма: {CurrentOrder.TargetFlowerForm.ToDisplayName()}.");
                     }
                     else
                     {
-                        _hud?.ShowBanner("Не тот сорт!", "Заказчик просит другой цветок.");
+                        _hud?.ShowBanner("Не тот сорт!", "Для исследования требуется другой вид цветка.");
                     }
                 }
             };
@@ -954,6 +1140,32 @@ namespace GardenMerger.Core
                     return "сухой";
                 default:
                     return "нейтральный";
+            }
+        }
+
+        public static string GetTemperatureModeDisplayName(TemperatureMode mode)
+        {
+            switch (mode)
+            {
+                case TemperatureMode.Warm:
+                    return "Тепло";
+                case TemperatureMode.Cold:
+                    return "Холодно";
+                default:
+                    return "Нейтрально";
+            }
+        }
+
+        public static string GetHumidityModeDisplayName(HumidityMode mode)
+        {
+            switch (mode)
+            {
+                case HumidityMode.Humid:
+                    return "Влажно";
+                case HumidityMode.Dry:
+                    return "Сухо";
+                default:
+                    return "Нейтрально";
             }
         }
 

@@ -101,7 +101,7 @@ namespace GardenMerger.UI
             _rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
             _rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
             _rectTransform.pivot = new Vector2(0.5f, 0f);
-            _rectTransform.sizeDelta = new Vector2(390f, 54f);
+            _rectTransform.sizeDelta = new Vector2(420f, 62f);
 
             _canvasGroup = GetComponent<CanvasGroup>();
             if (_canvasGroup == null) _canvasGroup = gameObject.AddComponent<CanvasGroup>();
@@ -141,7 +141,7 @@ namespace GardenMerger.UI
             swatchRect.anchorMax = new Vector2(0f, 0.5f);
             swatchRect.pivot = new Vector2(0f, 0.5f);
             swatchRect.anchoredPosition = new Vector2(14f, 0f);
-            swatchRect.sizeDelta = new Vector2(24f, 24f);
+            swatchRect.sizeDelta = new Vector2(28f, 28f);
 
             _swatchImage = swatchObj.GetComponent<Image>();
             var swatchOutline = swatchObj.GetComponent<Outline>();
@@ -163,12 +163,12 @@ namespace GardenMerger.UI
             titleRect.anchorMin = new Vector2(0f, 0.5f);
             titleRect.anchorMax = new Vector2(0f, 0.5f);
             titleRect.pivot = new Vector2(0f, 0.5f);
-            titleRect.anchoredPosition = new Vector2(46f, 10f);
-            titleRect.sizeDelta = new Vector2(330f, 24f);
+            titleRect.anchoredPosition = new Vector2(50f, 11f);
+            titleRect.sizeDelta = new Vector2(356f, 26f);
 
             _titleText = titleObj.GetComponent<Text>();
             _titleText.supportRichText = true;
-            _titleText.fontSize = 15;
+            _titleText.fontSize = 18;
             _titleText.fontStyle = FontStyle.Bold;
             _titleText.alignment = TextAnchor.MiddleLeft;
             if (customFont != null) _titleText.font = customFont;
@@ -192,12 +192,12 @@ namespace GardenMerger.UI
             subRect.anchorMin = new Vector2(0f, 0.5f);
             subRect.anchorMax = new Vector2(0f, 0.5f);
             subRect.pivot = new Vector2(0f, 0.5f);
-            subRect.anchoredPosition = new Vector2(46f, -10f);
-            subRect.sizeDelta = new Vector2(330f, 20f);
+            subRect.anchoredPosition = new Vector2(50f, -12f);
+            subRect.sizeDelta = new Vector2(356f, 24f);
 
             _subtitleText = subObj.GetComponent<Text>();
             _subtitleText.supportRichText = true;
-            _subtitleText.fontSize = 12;
+            _subtitleText.fontSize = 15;
             _subtitleText.fontStyle = FontStyle.Normal;
             _subtitleText.alignment = TextAnchor.MiddleLeft;
             _subtitleText.color = new Color(0.90f, 0.94f, 0.96f, 1f);

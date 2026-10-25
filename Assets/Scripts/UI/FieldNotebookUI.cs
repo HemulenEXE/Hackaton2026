@@ -183,7 +183,7 @@ namespace GardenMerger.UI
 
             if (_orders == null || _orders.Count == 0)
             {
-                _ordersListText.text = "Список заказов недоступен.";
+                _ordersListText.text = "Список научных задач пуст.";
                 return;
             }
 
@@ -197,44 +197,30 @@ namespace GardenMerger.UI
                 var order = _orders[i];
                 if (order == null) continue;
 
-                string status;
-                string statusColor;
+                var target = ColorRegistry.GetColor(order.TargetColorId);
+                string formName = order.RequiresFlowerForm ? order.TargetFlowerForm.ToDisplayName() : "Любая";
+                string clearInstruction = TabletopHUD.GetClearInstruction(order);
+
                 if (i < currentOrderIndex || (campaignWon && i == currentOrderIndex))
                 {
-                    status = "ВЫПОЛНЕН";
-                    statusColor = "#3B6B43";
+                    entries.Append("<color=#15803D><b>✓ ЭТАП #").Append(order.OrderId).Append(": ").Append(order.ClientTitle).Append(" [ИЗУЧЕНО]</b></color>\n")
+                        .Append("<color=#475569>Вид: ").Append(target.DisplayName).Append(" (").Append(target.BotanicalName).Append(")")
+                        .Append(" · Форма: ").Append(formName).Append("</color>\n\n");
                 }
                 else if (i == currentOrderIndex)
                 {
-                    status = "В РАБОТЕ";
-                    statusColor = "#94651C";
+                    entries.Append("<color=#B45309><b>★ ТЕКУЩИЙ ЭТАП #").Append(order.OrderId).Append(": ").Append(order.ClientTitle).Append(" ★</b></color>\n")
+                        .Append("🎯 <b>Целевой вид:</b> <color=#0F766E><b>").Append(target.DisplayName).Append("</b></color> (").Append(target.BotanicalName).Append(")\n")
+                        .Append("🌸 <b>Требуемая форма:</b> <b>").Append(formName).Append("</b>\n")
+                        .Append("📋 <b>Методика:</b> ").Append(clearInstruction).Append("\n")
+                        .Append("📥 <b>Фиксация:</b> Результат автоматически заносится в дневник при получении цветка.\n\n");
                 }
                 else
                 {
-                    status = "ОЖИДАЕТ";
-                    statusColor = "#777064";
+                    entries.Append("<color=#64748B><b>⏳ ЭТАП #").Append(order.OrderId).Append(": ").Append(order.ClientTitle).Append(" [В ПЛАНЕ]</b></color>\n")
+                        .Append("<color=#94A3B8>Вид: ").Append(target.DisplayName).Append(" (").Append(target.BotanicalName).Append(")")
+                        .Append(" · Форма: ").Append(formName).Append("</color>\n\n");
                 }
-
-                var target = ColorRegistry.GetColor(order.TargetColorId);
-                entries.Append("<b>Заказ #").Append(order.OrderId).Append(": ")
-                    .Append(order.ClientTitle).Append("</b>\n");
-                entries.Append("<color=").Append(statusColor).Append(">")
-                    .Append(status);
-                if (i == currentOrderIndex && !campaignWon)
-                {
-                    entries.Append(" — скрещиваний: ").Append(mergeCount)
-                        .Append(" / ").Append(order.ParMerges);
-                }
-
-                entries.Append("</color>\n")
-                    .Append(order.ClientRole).Append('\n')
-                    .Append("Нужен сорт: ").Append(target.DisplayName);
-                if (order.RequiresFlowerForm)
-                {
-                    entries.Append(" · форма: ").Append(order.TargetFlowerForm.ToDisplayName());
-                }
-
-                entries.Append('\n').Append(order.PoeticHint).Append("\n\n");
             }
 
             _ordersListText.text = entries.ToString();
@@ -242,10 +228,10 @@ namespace GardenMerger.UI
 
         private void ConfigureJournalText()
         {
-            ConfigureText(_titleText, 30, Color.black);
-            ConfigureText(_ordersListText, 20, new Color(0.09f, 0.12f, 0.10f));
-            ConfigureText(_recipesListText, 19, new Color(0.09f, 0.12f, 0.10f));
-            ConfigureText(_recipesCounterText, 20, new Color(0.09f, 0.12f, 0.10f));
+            ConfigureText(_titleText, 30, new Color(0.09f, 0.12f, 0.10f));
+            ConfigureText(_ordersListText, 18, new Color(0.09f, 0.12f, 0.10f));
+            ConfigureText(_recipesListText, 18, new Color(0.09f, 0.12f, 0.10f));
+            ConfigureText(_recipesCounterText, 19, new Color(0.09f, 0.12f, 0.10f));
         }
 
         private static void ConfigureText(Text text, int fontSize, Color color)
@@ -257,7 +243,7 @@ namespace GardenMerger.UI
 
             text.fontSize = fontSize;
             text.color = color;
-            text.lineSpacing = 1.2f;
+            text.lineSpacing = 1.15f;
             text.horizontalOverflow = HorizontalWrapMode.Wrap;
             text.verticalOverflow = VerticalWrapMode.Overflow;
             text.supportRichText = true;

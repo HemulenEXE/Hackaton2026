@@ -116,27 +116,158 @@ namespace GardenMerger.UI
             }
         }
 
-        public void UpdateOrder(OrderConfigSO order, int currentMerges)
+        public static string GetClearInstruction(OrderConfigSO order)
         {
-            if (order == null) return;
+            if (order == null) return string.Empty;
 
-            if (_orderTitleText != null) _orderTitleText.text = $"Заказ #{order.OrderId}: {order.ClientTitle}";
-            if (_clientRoleText != null) _clientRoleText.text = order.ClientRole;
-            if (_poeticHintText != null) _poeticHintText.text = order.PoeticHint;
+            switch (order.OrderId)
+            {
+                case 1:
+                    return "Поместите белое семя в инкубатор. Оставьте нейтральный режим и нажмите кнопку создания ростка.";
+                case 2:
+                    return "Переключите тумблер температуры на «ТЕПЛО» для получения красного мака, затем вырастите росток.";
+                case 3:
+                    return "Переключите тумблер температуры на «ХОЛОДНО» для получения синего цвета, затем вырастите росток.";
+                case 4:
+                    return "Скрестите розовый и голубой цветки в селекторе на столе, чтобы получить лавандовое семя.";
+                case 5:
+                    return "Скрестите противоположные сорта в селекторе для получения пепельного сорняка.";
+                case 6:
+                    return "Переключите тумблер влажности на «ВЛАЖНО» — форма цветка сдвинется с лилии на ромашку.";
+                case 7:
+                    return "Используйте ромашку как материнское растение слева и проведите влажный цикл до цветов на веточке.";
+                case 8:
+                    return "Оставьте влажный режим инкубатора, чтобы сдвинуть форму еще на одну ступень вперед до нескольких ромашек.";
+                case 9:
+                    return "Доведите форму до финального колокольчика через влажные циклы и придайте цветку лавандовый окрас.";
+                default:
+                    return string.IsNullOrEmpty(order.PoeticHint) ? "Вырастите требуемый сорт цветка в инкубаторе." : order.PoeticHint;
+            }
+        }
 
-            BotanicalColor targetColor = ColorRegistry.GetColor(order.TargetColorId);
+        private void EnsureOrderPanelStyling()
+        {
+            if (_orderTitleText == null) return;
+
+            var panelTransform = _orderTitleText.transform.parent;
+            if (panelTransform == null) return;
+
+            var panelRect = panelTransform.GetComponent<RectTransform>();
+            if (panelRect != null)
+            {
+                panelRect.sizeDelta = new Vector2(640f, 210f);
+            }
+
+            var panelImage = panelTransform.GetComponent<Image>();
+            if (panelImage != null)
+            {
+                panelImage.color = new Color(0.05f, 0.10f, 0.08f, 0.95f);
+            }
+
+            var panelOutline = panelTransform.GetComponent<Outline>();
+            if (panelOutline == null)
+            {
+                panelOutline = panelTransform.gameObject.AddComponent<Outline>();
+            }
+            panelOutline.effectColor = new Color(0.22f, 0.65f, 0.42f, 0.85f);
+            panelOutline.effectDistance = new Vector2(2f, -2f);
+
+            var panelShadow = panelTransform.GetComponent<Shadow>();
+            if (panelShadow == null)
+            {
+                panelShadow = panelTransform.gameObject.AddComponent<Shadow>();
+            }
+            panelShadow.effectColor = new Color(0f, 0f, 0f, 0.70f);
+            panelShadow.effectDistance = new Vector2(0f, -6f);
+
+            if (_orderTitleText != null)
+            {
+                _orderTitleText.supportRichText = true;
+                _orderTitleText.fontSize = 24;
+                _orderTitleText.fontStyle = FontStyle.Bold;
+                _orderTitleText.alignment = TextAnchor.MiddleLeft;
+                _orderTitleText.color = Color.white;
+                var rect = _orderTitleText.rectTransform;
+                rect.anchoredPosition = new Vector2(0f, 48f);
+                rect.sizeDelta = new Vector2(590f, 38f);
+            }
+
+            if (_clientRoleText != null)
+            {
+                _clientRoleText.gameObject.SetActive(false);
+                _clientRoleText.text = string.Empty;
+            }
+
             if (_targetColorText != null)
             {
-                string targetForm = order.RequiresFlowerForm
-                    ? $"\nФорма: {order.TargetFlowerForm.ToDisplayName()}"
-                    : string.Empty;
-                _targetColorText.text = $"Цель: {targetColor.DisplayName} — {targetColor.BotanicalName}{targetForm}";
+                _targetColorText.supportRichText = true;
+                _targetColorText.fontSize = 20;
+                _targetColorText.fontStyle = FontStyle.Normal;
+                _targetColorText.alignment = TextAnchor.MiddleLeft;
+                _targetColorText.color = Color.white;
+                var rect = _targetColorText.rectTransform;
+                rect.anchoredPosition = new Vector2(0f, 2f);
+                rect.sizeDelta = new Vector2(590f, 36f);
+            }
+
+            if (_poeticHintText != null)
+            {
+                _poeticHintText.supportRichText = true;
+                _poeticHintText.fontSize = 17;
+                _poeticHintText.fontStyle = FontStyle.Normal;
+                _poeticHintText.alignment = TextAnchor.MiddleLeft;
+                _poeticHintText.color = new Color(0.95f, 0.96f, 0.98f, 1f);
+                _poeticHintText.lineSpacing = 1.25f;
+                var rect = _poeticHintText.rectTransform;
+                rect.anchoredPosition = new Vector2(0f, -48f);
+                rect.sizeDelta = new Vector2(590f, 56f);
             }
 
             if (_mergeCounterText != null)
             {
-                string colorHex = currentMerges <= order.ParMerges ? "#238636" : "#B22222";
-                _mergeCounterText.text = $"Скрещиваний: <color={colorHex}>{currentMerges}</color> / Пар: {order.ParMerges}";
+                _mergeCounterText.gameObject.SetActive(false);
+                _mergeCounterText.text = string.Empty;
+            }
+        }
+
+        public void UpdateOrder(OrderConfigSO order, int currentMerges)
+        {
+            if (order == null) return;
+
+            EnsureOrderPanelStyling();
+
+            if (_orderTitleText != null)
+            {
+                _orderTitleText.text = $"<b><color=#FBBF24>ИССЛЕДОВАНИЕ #{order.OrderId}:</color> {order.ClientTitle}</b>";
+            }
+
+            if (_clientRoleText != null)
+            {
+                _clientRoleText.gameObject.SetActive(false);
+                _clientRoleText.text = string.Empty;
+            }
+
+            BotanicalColor targetColor = ColorRegistry.GetColor(order.TargetColorId);
+            string colorHex = ColorUtility.ToHtmlStringRGB(targetColor.Color);
+            string formStr = order.RequiresFlowerForm
+                ? $"🌸 Форма: <b>{order.TargetFlowerForm.ToDisplayName()}</b>"
+                : "🌸 Форма: <b>Любая</b>";
+
+            if (_targetColorText != null)
+            {
+                _targetColorText.text = $"🎯 <b>Целевой вид:</b> <color=#{colorHex}><b>{targetColor.DisplayName}</b></color> <size=16><color=#94A3B8>({targetColor.BotanicalName})</color></size>   |   {formStr}";
+            }
+
+            if (_poeticHintText != null)
+            {
+                string instruction = GetClearInstruction(order);
+                _poeticHintText.text = $"📋 <b>Методика:</b> {instruction}";
+            }
+
+            if (_mergeCounterText != null)
+            {
+                _mergeCounterText.gameObject.SetActive(false);
+                _mergeCounterText.text = string.Empty;
             }
 
             if (_targetColorSwatch != null)
@@ -338,6 +469,10 @@ namespace GardenMerger.UI
             {
                 return BannerType.Warning;
             }
+            if (lower.Contains("температур") || lower.Contains("влажност") || lower.Contains("режим") || lower.Contains("настройк"))
+            {
+                return BannerType.Info;
+            }
 
             return BannerType.Info;
         }
@@ -388,6 +523,17 @@ namespace GardenMerger.UI
                         SubtextColor = new Color(1.00f, 0.95f, 0.95f, 1f),
                         OutlineColor = new Color(0.88f, 0.11f, 0.28f, 0.90f),
                         TagText = "▲ ВНИМАНИЕ ▲"
+                    };
+
+                case BannerType.Info:
+                    return new BannerTheme
+                    {
+                        BackdropColor = new Color(0.04f, 0.09f, 0.14f, 0.96f),
+                        AccentColor = new Color(0.22f, 0.74f, 0.97f, 1f),
+                        TitleColor = new Color(0.56f, 0.88f, 1.00f, 1f),
+                        SubtextColor = new Color(0.94f, 0.98f, 1.00f, 1f),
+                        OutlineColor = new Color(0.03f, 0.55f, 0.75f, 0.90f),
+                        TagText = "⚙ РЕЖИМ ⚙"
                     };
 
                 default:
