@@ -7063,7 +7063,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!212 &1415953388
 SpriteRenderer:
   serializedVersion: 3
@@ -7133,8 +7133,8 @@ Transform:
   m_GameObject: {fileID: 1415953387}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -7.16, y: -0.46, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: -7.5728, y: -0.46, z: 0}
+  m_LocalScale: {x: 0.64036757, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -8418,10 +8418,10 @@ Camera:
   m_LensShift: {x: 0, y: 0}
   m_NormalizedViewPortRect:
     serializedVersion: 2
-    x: 0
-    y: 0
-    width: 1
-    height: 1
+    x: 0.0016038492
+    y: 0.0028530671
+    width: 0.9959904
+    height: 0.99286735
   near clip plane: 0.3
   far clip plane: 1000
   field of view: 60

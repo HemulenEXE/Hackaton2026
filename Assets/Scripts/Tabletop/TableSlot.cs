@@ -14,6 +14,8 @@ namespace GardenMerger.Tabletop
 
     public class TableSlot : MonoBehaviour
     {
+        private const int MachineItemSortingOrder = 1;
+
         [SerializeField] private SlotType _slotType;
         [SerializeField] private float _snapRadius = 1.0f;
         private DraggableItem _currentItem;
@@ -56,12 +58,29 @@ namespace GardenMerger.Tabletop
             {
                 item.transform.position = transform.position;
                 item.SetCurrentSlot(this);
+
+                if (IsMachineSlot())
+                {
+                    SpriteRenderer[] renderers = item.GetComponentsInChildren<SpriteRenderer>(true);
+                    foreach (SpriteRenderer renderer in renderers)
+                    {
+                        renderer.sortingOrder = MachineItemSortingOrder;
+                    }
+                }
             }
         }
 
         public void ClearItem()
         {
             _currentItem = null;
+        }
+
+        private bool IsMachineSlot()
+        {
+            return _slotType == SlotType.IncubatorSeedInput ||
+                   _slotType == SlotType.IncubatorFlowerOutput ||
+                   _slotType == SlotType.CrossBreederParentA ||
+                   _slotType == SlotType.CrossBreederParentB;
         }
     }
 }
