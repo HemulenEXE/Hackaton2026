@@ -105,7 +105,35 @@ namespace GardenMerger.Core
 
             NotifyOrderChanged();
 
-            _manualModalUI?.Show();
+            _manualModalUI?.StartTutorial(BuildStartupTutorialSteps());
+        }
+
+        private List<LabManualModalUI.TutorialStep> BuildStartupTutorialSteps()
+        {
+            var journalObject = FindJournalSceneObject();
+            return new List<LabManualModalUI.TutorialStep>
+            {
+                new LabManualModalUI.TutorialStep(
+                    FindSceneTransform("Pouch_White"),
+                    "Мешок с семенами",
+                    "Нажмите на мешок, чтобы получить обычное семечко. Семена можно брать без ограничений; перетащите одно в инкубатор."),
+                new LabManualModalUI.TutorialStep(
+                    _incubator != null ? _incubator.transform : null,
+                    "Инкубатор",
+                    "Положите семечко в слот. Холод дает синий, тепло — красный цветок. Влажность меняет форму: влажно — на ступень вперед, сухо — назад. Потяните рычаг, чтобы вырастить цветок."),
+                new LabManualModalUI.TutorialStep(
+                    _crossBreeder != null ? _crossBreeder.transform : null,
+                    "Опылитель",
+                    "Положите два цветка в чаши и нажмите зеленую кнопку синтеза. Появится гибридное семя; форма будущего цветка наследуется от левого растения."),
+                new LabManualModalUI.TutorialStep(
+                    journalObject != null ? journalObject.transform : null,
+                    "Полевой журнал",
+                    "Откройте книгу, чтобы посмотреть открытые формулы скрещивания, задачи и историю фенотипов."),
+                new LabManualModalUI.TutorialStep(
+                    FindSceneTransform("OrderPanel"),
+                    "Научные задания",
+                    "Следите за текущим заданием на панели. Вырастите требуемый сорт цветка, чтобы выполнить этап.")
+            };
         }
 
         private void OnDestroy()

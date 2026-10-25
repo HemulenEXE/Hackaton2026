@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -7,6 +8,20 @@ namespace GardenMerger.UI
 {
     public class LabManualModalUI : MonoBehaviour
     {
+        public sealed class TutorialStep
+        {
+            public Transform Target { get; }
+            public string Title { get; }
+            public string Description { get; }
+
+            public TutorialStep(Transform target, string title, string description)
+            {
+                Target = target;
+                Title = title;
+                Description = description;
+            }
+        }
+
         private GameObject _backdropRoot;
         private RectTransform _cardRect;
         private CanvasGroup _canvasGroup;
@@ -17,6 +32,18 @@ namespace GardenMerger.UI
         private AudioClip _clickSound;
         private AudioSource _audioSource;
         private Coroutine _animRoutine;
+        private GameObject _tutorialRoot;
+        private RectTransform _tutorialCard;
+        private RectTransform _tutorialCanvasRect;
+        private Canvas _canvas;
+        private CanvasGroup _tutorialCanvasGroup;
+        private Text _tutorialTitle;
+        private Text _tutorialDescription;
+        private Text _tutorialButtonText;
+        private Button _tutorialNextButton;
+        private List<TutorialStep> _tutorialSteps;
+        private int _tutorialStepIndex;
+        private Coroutine _tutorialRoutine;
 
         public bool IsOpen => _backdropRoot != null && _backdropRoot.activeSelf;
         public event Action OnOpened;
@@ -54,6 +81,216 @@ namespace GardenMerger.UI
 
             BuildCornerHelpButton(canvasTransform, mainFont);
             BuildModalWindow(canvasTransform, mainFont);
+            BuildTutorialWindow(canvasTransform, mainFont);
+        }
+
+        private void BuildTutorialWindow(Transform canvasTransform, Font font)
+        {
+            _canvas = canvasTransform.GetComponentInParent<Canvas>();
+            _tutorialCanvasRect = canvasTransform as RectTransform;
+            if (_tutorialCanvasRect == null)
+            {
+                Debug.LogError("[LabManualModalUI] Tutorial requires a Canvas RectTransform.", this);
+                return;
+            }
+
+            _tutorialRoot = new GameObject("TutorialPopup", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(CanvasGroup));
+            _tutorialRoot.transform.SetParent(canvasTransform, false);
+            _tutorialRoot.transform.SetAsLastSibling();
+            _tutorialCard = _tutorialRoot.GetComponent<RectTransform>();
+            _tutorialCard.anchorMin = new Vector2(0.5f, 0.5f);
+            _tutorialCard.anchorMax = new Vector2(0.5f, 0.5f);
+            _tutorialCard.pivot = new Vector2(0.5f, 0.5f);
+            _tutorialCard.sizeDelta = new Vector2(420f, 250f);
+            _tutorialRoot.GetComponent<Image>().color = new Color(0.97f, 0.96f, 0.94f, 1f);
+            _tutorialCanvasGroup = _tutorialRoot.GetComponent<CanvasGroup>();
+            _tutorialCanvasGroup.alpha = 0f;
+
+            var outline = _tutorialRoot.AddComponent<Outline>();
+            outline.effectColor = new Color(0.12f, 0.28f, 0.20f, 1f);
+            outline.effectDistance = new Vector2(2f, -2f);
+            var shadow = _tutorialRoot.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.45f);
+            shadow.effectDistance = new Vector2(0f, -5f);
+
+            var titleObj = new GameObject("Title", typeof(RectTransform), typeof(Text));
+            titleObj.transform.SetParent(_tutorialRoot.transform, false);
+            var titleRect = titleObj.GetComponent<RectTransform>();
+            titleRect.anchorMin = new Vector2(0f, 1f);
+            titleRect.anchorMax = new Vector2(1f, 1f);
+            titleRect.pivot = new Vector2(0.5f, 1f);
+            titleRect.offsetMin = new Vector2(18f, -48f);
+            titleRect.offsetMax = new Vector2(-18f, -12f);
+            _tutorialTitle = titleObj.GetComponent<Text>();
+            _tutorialTitle.font = font;
+            _tutorialTitle.fontSize = 19;
+            _tutorialTitle.fontStyle = FontStyle.Bold;
+            _tutorialTitle.alignment = TextAnchor.MiddleCenter;
+            _tutorialTitle.color = new Color(0.08f, 0.30f, 0.20f, 1f);
+            _tutorialTitle.raycastTarget = false;
+
+            var descriptionObj = new GameObject("Description", typeof(RectTransform), typeof(Text));
+            descriptionObj.transform.SetParent(_tutorialRoot.transform, false);
+            var descriptionRect = descriptionObj.GetComponent<RectTransform>();
+            descriptionRect.anchorMin = new Vector2(0f, 0f);
+            descriptionRect.anchorMax = new Vector2(1f, 1f);
+            descriptionRect.offsetMin = new Vector2(20f, 62f);
+            descriptionRect.offsetMax = new Vector2(-20f, -54f);
+            _tutorialDescription = descriptionObj.GetComponent<Text>();
+            _tutorialDescription.font = font;
+            _tutorialDescription.fontSize = 16;
+            _tutorialDescription.lineSpacing = 1.2f;
+            _tutorialDescription.alignment = TextAnchor.MiddleCenter;
+            _tutorialDescription.horizontalOverflow = HorizontalWrapMode.Wrap;
+            _tutorialDescription.verticalOverflow = VerticalWrapMode.Overflow;
+            _tutorialDescription.color = new Color(0.10f, 0.12f, 0.11f, 1f);
+            _tutorialDescription.raycastTarget = false;
+
+            var buttonObj = new GameObject("NextButton", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+            buttonObj.transform.SetParent(_tutorialRoot.transform, false);
+            var buttonRect = buttonObj.GetComponent<RectTransform>();
+            buttonRect.anchorMin = new Vector2(0.5f, 0f);
+            buttonRect.anchorMax = new Vector2(0.5f, 0f);
+            buttonRect.pivot = new Vector2(0.5f, 0f);
+            buttonRect.anchoredPosition = new Vector2(0f, 12f);
+            buttonRect.sizeDelta = new Vector2(190f, 38f);
+            buttonObj.GetComponent<Image>().color = new Color(0.08f, 0.46f, 0.32f, 1f);
+            _tutorialNextButton = buttonObj.GetComponent<Button>();
+            _tutorialNextButton.onClick.AddListener(AdvanceTutorial);
+
+            var buttonTextObj = new GameObject("Text", typeof(RectTransform), typeof(Text));
+            buttonTextObj.transform.SetParent(buttonObj.transform, false);
+            var buttonTextRect = buttonTextObj.GetComponent<RectTransform>();
+            buttonTextRect.anchorMin = Vector2.zero;
+            buttonTextRect.anchorMax = Vector2.one;
+            buttonTextRect.offsetMin = Vector2.zero;
+            buttonTextRect.offsetMax = Vector2.zero;
+            _tutorialButtonText = buttonTextObj.GetComponent<Text>();
+            _tutorialButtonText.font = font;
+            _tutorialButtonText.fontSize = 15;
+            _tutorialButtonText.alignment = TextAnchor.MiddleCenter;
+            _tutorialButtonText.color = Color.white;
+            _tutorialButtonText.raycastTarget = false;
+
+            _tutorialRoot.SetActive(false);
+        }
+
+        public void StartTutorial(IList<TutorialStep> steps)
+        {
+            if (_tutorialRoot == null || steps == null || steps.Count == 0)
+            {
+                return;
+            }
+
+            _tutorialSteps = new List<TutorialStep>();
+            for (int i = 0; i < steps.Count; i++)
+            {
+                if (steps[i] == null || steps[i].Target == null)
+                {
+                    Debug.LogWarning($"[LabManualModalUI] Skipping tutorial step {i + 1}: target is missing.", this);
+                    continue;
+                }
+                _tutorialSteps.Add(steps[i]);
+            }
+
+            if (_tutorialSteps.Count == 0)
+            {
+                return;
+            }
+
+            if (_tutorialRoutine != null) StopCoroutine(_tutorialRoutine);
+            _tutorialStepIndex = 0;
+            ShowTutorialStep();
+            _tutorialRoot.SetActive(true);
+            PositionTutorialPopup();
+            _tutorialRoutine = StartCoroutine(FadeTutorial(0f, 1f));
+        }
+
+        private void AdvanceTutorial()
+        {
+            PlaySound();
+            if (_tutorialRoutine != null) StopCoroutine(_tutorialRoutine);
+            _tutorialRoutine = StartCoroutine(AdvanceTutorialRoutine());
+        }
+
+        private IEnumerator AdvanceTutorialRoutine()
+        {
+            yield return FadeTutorial(1f, 0f);
+            _tutorialStepIndex++;
+            if (_tutorialSteps == null || _tutorialStepIndex >= _tutorialSteps.Count)
+            {
+                _tutorialRoot.SetActive(false);
+                _tutorialSteps = null;
+                _tutorialRoutine = null;
+                yield break;
+            }
+
+            ShowTutorialStep();
+            PositionTutorialPopup();
+            yield return FadeTutorial(0f, 1f);
+            _tutorialRoutine = null;
+        }
+
+        private IEnumerator FadeTutorial(float from, float to)
+        {
+            const float duration = 0.12f;
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                _tutorialCanvasGroup.alpha = Mathf.Lerp(from, to, Mathf.Clamp01(elapsed / duration));
+                yield return null;
+            }
+            _tutorialCanvasGroup.alpha = to;
+        }
+
+        private void ShowTutorialStep()
+        {
+            TutorialStep step = _tutorialSteps[_tutorialStepIndex];
+            _tutorialTitle.text = $"{_tutorialStepIndex + 1}. {step.Title}";
+            _tutorialDescription.text = step.Description;
+            _tutorialButtonText.text = _tutorialStepIndex == _tutorialSteps.Count - 1 ? "ЗАВЕРШИТЬ" : "ДАЛЕЕ";
+        }
+
+        private void LateUpdate()
+        {
+            if (_tutorialRoot != null && _tutorialRoot.activeSelf)
+            {
+                PositionTutorialPopup();
+            }
+        }
+
+        private void PositionTutorialPopup()
+        {
+            if (_tutorialSteps == null || _tutorialStepIndex >= _tutorialSteps.Count)
+            {
+                return;
+            }
+
+            Transform target = _tutorialSteps[_tutorialStepIndex].Target;
+            if (target == null)
+            {
+                return;
+            }
+
+            Camera camera = target is RectTransform
+                ? (_canvas != null && _canvas.renderMode != RenderMode.ScreenSpaceOverlay ? _canvas.worldCamera : null)
+                : Camera.main;
+            Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(camera, target.position);
+            Camera eventCamera = _canvas != null && _canvas.renderMode != RenderMode.ScreenSpaceOverlay ? _canvas.worldCamera : null;
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(_tutorialCanvasRect, screenPoint, eventCamera, out Vector2 targetLocal))
+            {
+                return;
+            }
+
+            Vector2 popupSize = _tutorialCard.sizeDelta;
+            Vector2 offset = new Vector2(targetLocal.x > 0f ? -popupSize.x * 0.62f : popupSize.x * 0.62f,
+                                         targetLocal.y > 0f ? -popupSize.y * 0.72f : popupSize.y * 0.72f);
+            Vector2 position = targetLocal + offset;
+            Rect canvasBounds = _tutorialCanvasRect.rect;
+            position.x = Mathf.Clamp(position.x, canvasBounds.xMin + popupSize.x * 0.5f + 12f, canvasBounds.xMax - popupSize.x * 0.5f - 12f);
+            position.y = Mathf.Clamp(position.y, canvasBounds.yMin + popupSize.y * 0.5f + 12f, canvasBounds.yMax - popupSize.y * 0.5f - 12f);
+            _tutorialCard.anchoredPosition = position;
         }
 
         private void BuildCornerHelpButton(Transform canvasTransform, Font font)
@@ -437,6 +674,11 @@ namespace GardenMerger.UI
         public void Show()
         {
             if (_backdropRoot == null) return;
+
+            if (_tutorialRoutine != null) StopCoroutine(_tutorialRoutine);
+            _tutorialRoutine = null;
+            _tutorialSteps = null;
+            if (_tutorialRoot != null) _tutorialRoot.SetActive(false);
 
             if (_animRoutine != null) StopCoroutine(_animRoutine);
             _animRoutine = StartCoroutine(ShowRoutine());
