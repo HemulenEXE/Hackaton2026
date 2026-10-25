@@ -245,7 +245,7 @@ namespace GardenMerger.Tabletop
                 if (!slot.CanAcceptItem(this)) continue;
 
                 float dist = Vector2.Distance(transform.position, slot.transform.position);
-                if (dist <= slot.SnapRadius && dist < minDistance)
+                if (slot.IsWithinSnapArea(transform.position) && dist < minDistance)
                 {
                     minDistance = dist;
                     bestSlot = slot;

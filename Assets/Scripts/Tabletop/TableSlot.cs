@@ -19,6 +19,8 @@ namespace GardenMerger.Tabletop
         [SerializeField] private SlotType _slotType;
         [SerializeField] private float _snapRadius = 1.5f;
         private DraggableItem _currentItem;
+        private Bounds _snapAreaBounds;
+        private bool _hasSnapArea;
 
         public SlotType SlotType => _slotType;
         public float SnapRadius => _snapRadius;
@@ -49,6 +51,25 @@ namespace GardenMerger.Tabletop
                 default:
                     return false;
             }
+        }
+
+        public void SetSnapArea(Bounds bounds)
+        {
+            _snapAreaBounds = bounds;
+            _hasSnapArea = true;
+        }
+
+        public bool IsWithinSnapArea(Vector2 position)
+        {
+            if (_hasSnapArea)
+            {
+                return position.x >= _snapAreaBounds.min.x &&
+                       position.x <= _snapAreaBounds.max.x &&
+                       position.y >= _snapAreaBounds.min.y &&
+                       position.y <= _snapAreaBounds.max.y;
+            }
+
+            return Vector2.Distance(position, transform.position) <= _snapRadius;
         }
 
         public void AssignItem(DraggableItem item)

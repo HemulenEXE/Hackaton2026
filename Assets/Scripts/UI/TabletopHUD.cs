@@ -4,6 +4,7 @@ using GardenMerger.Configs;
 using GardenMerger.Core;
 using GardenMerger.Tabletop;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace GardenMerger.UI
@@ -57,6 +58,14 @@ namespace GardenMerger.UI
         private bool _isBannerActive;
         private float _bannerHoldTimer;
         private float _punchProgress = 1f;
+        private RectTransform _orderPanelRect;
+        private Vector2 _orderPanelExpandedPosition;
+        private Button _orderPanelToggleButton;
+        private Text _orderPanelToggleText;
+        private Coroutine _orderPanelSlideRoutine;
+        private bool _orderPanelPinnedOpen = true;
+        private bool _orderPanelPointerInside;
+        private bool _orderPanelExpanded = true;
 
         private struct BannerTheme
         {
@@ -156,6 +165,13 @@ namespace GardenMerger.UI
             if (panelRect != null)
             {
                 panelRect.sizeDelta = new Vector2(640f, 210f);
+                if (_orderPanelRect == null)
+                {
+                    _orderPanelRect = panelRect;
+                    _orderPanelExpandedPosition = panelRect.anchoredPosition;
+                    BuildOrderPanelToggle(panelTransform);
+                    BuildOrderPanelHoverEvents(panelTransform.gameObject);
+                }
             }
 
             var panelImage = panelTransform.GetComponent<Image>();
@@ -227,6 +243,141 @@ namespace GardenMerger.UI
             {
                 _mergeCounterText.gameObject.SetActive(false);
                 _mergeCounterText.text = string.Empty;
+            }
+        }
+
+        private void BuildOrderPanelToggle(Transform panelTransform)
+        {
+            var buttonObject = new GameObject("OrderPanelToggle", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+            buttonObject.transform.SetParent(panelTransform, false);
+            buttonObject.transform.SetAsLastSibling();
+
+            var buttonRect = buttonObject.GetComponent<RectTransform>();
+            buttonRect.anchorMin = new Vector2(0f, 0.5f);
+            buttonRect.anchorMax = new Vector2(0f, 0.5f);
+            buttonRect.pivot = new Vector2(0f, 0.5f);
+            buttonRect.anchoredPosition = new Vector2(0f, 0f);
+            buttonRect.sizeDelta = new Vector2(42f, 58f);
+
+            var buttonImage = buttonObject.GetComponent<Image>();
+            buttonImage.color = new Color(0.08f, 0.32f, 0.23f, 1f);
+
+            _orderPanelToggleButton = buttonObject.GetComponent<Button>();
+            _orderPanelToggleButton.transition = Selectable.Transition.ColorTint;
+            _orderPanelToggleButton.onClick.AddListener(ToggleOrderPanel);
+
+            var textObject = new GameObject("Arrow", typeof(RectTransform), typeof(Text));
+            textObject.transform.SetParent(buttonObject.transform, false);
+            var textRect = textObject.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+
+            _orderPanelToggleText = textObject.GetComponent<Text>();
+            _orderPanelToggleText.font = GameTextStyle.ReadableFont;
+            _orderPanelToggleText.fontSize = 28;
+            _orderPanelToggleText.alignment = TextAnchor.MiddleCenter;
+            _orderPanelToggleText.color = Color.white;
+            _orderPanelToggleText.raycastTarget = false;
+            UpdateOrderPanelToggleIcon();
+        }
+
+        private void BuildOrderPanelHoverEvents(GameObject panelObject)
+        {
+            var eventTrigger = panelObject.GetComponent<EventTrigger>();
+            if (eventTrigger == null)
+            {
+                eventTrigger = panelObject.AddComponent<EventTrigger>();
+            }
+            if (eventTrigger.triggers == null)
+            {
+                eventTrigger.triggers = new System.Collections.Generic.List<EventTrigger.Entry>();
+            }
+
+            AddOrderPanelPointerEvent(eventTrigger, EventTriggerType.PointerEnter, OnOrderPanelPointerEnter);
+            AddOrderPanelPointerEvent(eventTrigger, EventTriggerType.PointerExit, OnOrderPanelPointerExit);
+        }
+
+        private static void AddOrderPanelPointerEvent(EventTrigger eventTrigger, EventTriggerType eventType, System.Action callback)
+        {
+            var entry = new EventTrigger.Entry { eventID = eventType };
+            entry.callback.AddListener(_ => callback());
+            eventTrigger.triggers.Add(entry);
+        }
+
+        private void ToggleOrderPanel()
+        {
+            _orderPanelPinnedOpen = !_orderPanelPinnedOpen;
+            SetOrderPanelExpanded(_orderPanelPinnedOpen || _orderPanelPointerInside);
+        }
+
+        private void OnOrderPanelPointerEnter()
+        {
+            _orderPanelPointerInside = true;
+            if (!_orderPanelPinnedOpen)
+            {
+                SetOrderPanelExpanded(true);
+            }
+        }
+
+        private void OnOrderPanelPointerExit()
+        {
+            _orderPanelPointerInside = false;
+            if (!_orderPanelPinnedOpen)
+            {
+                SetOrderPanelExpanded(false);
+            }
+        }
+
+        private void SetOrderPanelExpanded(bool expanded)
+        {
+            if (_orderPanelRect == null)
+            {
+                return;
+            }
+
+            _orderPanelExpanded = expanded;
+            if (_orderPanelSlideRoutine != null)
+            {
+                StopCoroutine(_orderPanelSlideRoutine);
+            }
+
+            Vector2 target = _orderPanelExpandedPosition;
+            if (!expanded)
+            {
+                float visibleHandleWidth = _orderPanelToggleButton != null ? _orderPanelToggleButton.GetComponent<RectTransform>().rect.width : 42f;
+                target.x += Mathf.Max(0f, _orderPanelRect.rect.width - visibleHandleWidth);
+            }
+
+            UpdateOrderPanelToggleIcon();
+            _orderPanelSlideRoutine = StartCoroutine(SlideOrderPanel(target));
+        }
+
+        private System.Collections.IEnumerator SlideOrderPanel(Vector2 targetPosition)
+        {
+            Vector2 startPosition = _orderPanelRect.anchoredPosition;
+            const float duration = 0.22f;
+            float elapsed = 0f;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                t = t * t * (3f - 2f * t);
+                _orderPanelRect.anchoredPosition = Vector2.LerpUnclamped(startPosition, targetPosition, t);
+                yield return null;
+            }
+
+            _orderPanelRect.anchoredPosition = targetPosition;
+            _orderPanelSlideRoutine = null;
+        }
+
+        private void UpdateOrderPanelToggleIcon()
+        {
+            if (_orderPanelToggleText != null)
+            {
+                _orderPanelToggleText.text = _orderPanelExpanded ? "‹" : "›";
             }
         }
 

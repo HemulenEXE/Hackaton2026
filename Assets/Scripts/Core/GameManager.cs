@@ -225,6 +225,7 @@ namespace GardenMerger.Core
                     null,
                     sproutDuration);
 
+                ConfigureIncubatorSeedSnapArea();
                 SetupTemperatureControl();
                 SetupSproutLever();
             }
@@ -328,6 +329,43 @@ namespace GardenMerger.Core
             }
 
             return true;
+        }
+
+        private void ConfigureIncubatorSeedSnapArea()
+        {
+            if (_incubator == null || _incubator.SeedSlot == null)
+            {
+                return;
+            }
+
+            var renderers = _incubator.GetComponentsInChildren<SpriteRenderer>(true);
+            bool hasBounds = false;
+            Bounds incubatorBounds = default;
+            foreach (var renderer in renderers)
+            {
+                if (renderer == null || !renderer.enabled || !renderer.gameObject.activeInHierarchy || renderer.sprite == null)
+                {
+                    continue;
+                }
+
+                if (!hasBounds)
+                {
+                    incubatorBounds = renderer.bounds;
+                    hasBounds = true;
+                }
+                else
+                {
+                    incubatorBounds.Encapsulate(renderer.bounds);
+                }
+            }
+
+            if (!hasBounds)
+            {
+                Debug.LogWarning("[GameManager] Incubator has no active sprite renderers; seed snapping will use the slot radius.", _incubator);
+                return;
+            }
+
+            _incubator.SeedSlot.SetSnapArea(incubatorBounds);
         }
 
         private void SetupTemperatureControl()
