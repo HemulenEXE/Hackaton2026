@@ -101,7 +101,7 @@ namespace GardenMerger.UI
             _tutorialCard.anchorMin = new Vector2(0.5f, 0.5f);
             _tutorialCard.anchorMax = new Vector2(0.5f, 0.5f);
             _tutorialCard.pivot = new Vector2(0.5f, 0.5f);
-            _tutorialCard.sizeDelta = new Vector2(420f, 250f);
+            _tutorialCard.sizeDelta = new Vector2(520f, 360f);
             _tutorialRoot.GetComponent<Image>().color = new Color(0.97f, 0.96f, 0.94f, 1f);
             _tutorialCanvasGroup = _tutorialRoot.GetComponent<CanvasGroup>();
             _tutorialCanvasGroup.alpha = 0f;
@@ -119,8 +119,8 @@ namespace GardenMerger.UI
             titleRect.anchorMin = new Vector2(0f, 1f);
             titleRect.anchorMax = new Vector2(1f, 1f);
             titleRect.pivot = new Vector2(0.5f, 1f);
-            titleRect.offsetMin = new Vector2(18f, -48f);
-            titleRect.offsetMax = new Vector2(-18f, -12f);
+            titleRect.offsetMin = new Vector2(20f, -52f);
+            titleRect.offsetMax = new Vector2(-20f, -12f);
             _tutorialTitle = titleObj.GetComponent<Text>();
             _tutorialTitle.font = font;
             _tutorialTitle.fontSize = 19;
@@ -134,11 +134,11 @@ namespace GardenMerger.UI
             var descriptionRect = descriptionObj.GetComponent<RectTransform>();
             descriptionRect.anchorMin = new Vector2(0f, 0f);
             descriptionRect.anchorMax = new Vector2(1f, 1f);
-            descriptionRect.offsetMin = new Vector2(20f, 62f);
-            descriptionRect.offsetMax = new Vector2(-20f, -54f);
+            descriptionRect.offsetMin = new Vector2(24f, 68f);
+            descriptionRect.offsetMax = new Vector2(-24f, -60f);
             _tutorialDescription = descriptionObj.GetComponent<Text>();
             _tutorialDescription.font = font;
-            _tutorialDescription.fontSize = 16;
+            _tutorialDescription.fontSize = 17;
             _tutorialDescription.lineSpacing = 1.2f;
             _tutorialDescription.alignment = TextAnchor.MiddleCenter;
             _tutorialDescription.horizontalOverflow = HorizontalWrapMode.Wrap;
@@ -446,7 +446,7 @@ namespace GardenMerger.UI
             headerTxt.fontStyle = FontStyle.Normal;
             headerTxt.alignment = TextAnchor.MiddleCenter;
             headerTxt.color = new Color(0.08f, 0.20f, 0.14f, 1f);
-            headerTxt.text = "ВВОДНЫЙ ИНСТРУКТАЖ СТАЖЁРА-ЛАБОРАНТА";
+            headerTxt.text = "БОТАНИЧЕСКАЯ СТАНЦИЯ · ВВОДНЫЙ РЕГЛАМЕНТ";
 
             // Body ScrollView strictly contained in card
             var scrollObj = new GameObject("BodyScrollView", typeof(RectTransform), typeof(ScrollRect));
@@ -527,32 +527,32 @@ namespace GardenMerger.UI
             bodyHeaderTxt.horizontalOverflow = HorizontalWrapMode.Wrap;
             bodyHeaderTxt.verticalOverflow = VerticalWrapMode.Overflow;
             bodyHeaderTxt.text =
-                "<size=15><color=#258A66>БОТАНИЧЕСКАЯ СТАНЦИЯ · ВВОДНЫЙ РЕГЛАМЕНТ</color></size>\n" +
-                "<color=#25312D>Поздравляем с приёмом на работу стажёром-лаборантом! Вот ваше рабочее место. " +
-                "Кликните на мешок с семенами, чтобы получить обычное семечко. Ниже — порядок работы с оборудованием.</color>";
+                "<size=25><color=#25312D>ВВОДНЫЙ ИНСТРУКТАЖ СТАЖЁРА-ЛАБОРАНТА</color></size>\n" +
+                "<color=#25312D>Поздравляем с приёмом на работу! Ниже — порядок работы с оборудованием ботанической станции.</color>";
             var headerLayout = introBlockObj.GetComponent<LayoutElement>();
-            headerLayout.minHeight = 110f;
-            headerLayout.preferredHeight = 110f;
+            headerLayout.minHeight = 100f;
+            headerLayout.preferredHeight = 100f;
 
             AddStepItem(contentObj.transform, font,
-                "1. МЕШОК С СЕМЕНАМИ (слева на столе)",
-                "Кликните на мешок, чтобы получить базовое белое семя. Брать семена можно в любой момент без ограничений и сразу нести в инкубатор.");
+                "1. МЕШОК С СЕМЕНАМИ (слева стола)",
+                "Кликните по холщовому мешку с семенами, чтобы получить обычное белое семя лилии.\n" +
+                "Новое семечко можно брать в любой момент без ограничений и сразу нести в инкубатор.");
 
             AddStepItem(contentObj.transform, font,
                 "2. ИНКУБАТОР ДЛЯ ПРОРАЩИВАНИЯ (по центру)",
-                "Перетащите семя в слот инкубатора и настройте режим:\n" +
-                "• Тумблер «ТЕМП»: Холодно — синий цветок, Тепло — красный мак.\n" +
-                "• Тумблер «ВЛАЖН»: Влажно — развитие формы вперёд, Сухо — назад.\n" +
-                "Потяните рычаг проращивания, чтобы семя распустилось в готовый цветок на лотке.");
+                "Перетащите семя в слот инкубатора и выберите условия созревания:\n" +
+                "• <b>Тумблер «ТЕМПЕРАТУРА»(Красный)</b>: сдвигает оттенок цветка. <i>Холод</i> даёт синий цвет, <i>Тепло</i> — красный.\n" +
+                "• <b>Тумблер «ВЛАЖНОСТЬ»(Зеленый)</b>: управляет морфологией. <i>Влажно</i> развивает форму на 1 ступень вперёд (тумблер вверх), <i>Сухо</i> — на 1 ступень назад (тумблер вниз).\n" +
+                "• Нажмите <b>кнопку проращивания</b>, чтобы цветок распустился на лотке готовым образцом.");
 
             AddStepItem(contentObj.transform, font,
-                "3. СЕЛЕКТОР СКРЕЩИВАНИЯ (справа на столе)",
-                "Установите два цветка в чаши скрещивателя и нажмите зелёную кнопку синтеза.\n" +
-                "Форма гибрида наследуется от материнского (левого) цветка!");
+                "3. СЕЛЕКТОР СКРЕЩИВАНИЯ (справа стола)",
+                "Установите два выращенных цветка в чаши скрещивателя и нажмите зелёную кнопку синтеза.\n" +
+                "Вы получите гибридное семя нового окраса. <b>Форма будущего цветка наследуется от материнского (левого) растения!</b>");
 
             AddStepItem(contentObj.transform, font,
-                "4. ПОЛЕВОЙ ЖУРНАЛ БОТАНИКА (книга на столе)",
-                "Кликните по книге на столе, чтобы изучить список открытых формул скрещивания, задачи и историю зафиксированных фенотипов.");
+                "",
+                "Кликните по журналу на столе, чтобы изучить задачи ботаника, список открытых формул скрещивания, а также зафиксированные в опытах фенотипы.");
 
             _bodyScrollRect.viewport = viewportRt;
             _bodyScrollRect.content = contentRt;
@@ -567,7 +567,7 @@ namespace GardenMerger.UI
 
             AddStepItem(contentObj.transform, font,
                 "5. НАУЧНЫЕ ЗАДАНИЯ (панель справа вверху)",
-                "Выполняйте этапы по очереди. Как только требуемый сорт цветка будет получен, этап зачтётся и занесётся в дневник автоматически!");
+                "Выполняйте исследовательские этапы по очереди. Как только требуемый сорт цветка будет выращен, <b>этап сдаётся и заносится в дневник автоматически</b>!");
 
             // Bottom Confirm Button: "[ ПРИСТУПИТЬ К РАБОТЕ ]"
             var bottomBtnObj = new GameObject("ConfirmButton", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Outline), typeof(Button));
@@ -596,7 +596,7 @@ namespace GardenMerger.UI
 
             var bTxt = bottomTextObj.GetComponent<Text>();
             bTxt.font = font;
-            bTxt.text = "ПРИСТУПИТЬ К РАБОТЕ";
+            bTxt.text = "ПРИСТУПИТЬ К ИССЛЕДОВАНИЯМ";
             bTxt.fontSize = 16;
             bTxt.fontStyle = FontStyle.Normal;
             bTxt.alignment = TextAnchor.MiddleCenter;

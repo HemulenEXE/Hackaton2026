@@ -255,7 +255,7 @@ namespace GardenMerger.UI
             var buttonRect = buttonObject.GetComponent<RectTransform>();
             buttonRect.anchorMin = new Vector2(0f, 0.5f);
             buttonRect.anchorMax = new Vector2(0f, 0.5f);
-            buttonRect.pivot = new Vector2(0f, 0.5f);
+            buttonRect.pivot = new Vector2(1f, 0.5f);
             buttonRect.anchoredPosition = new Vector2(0f, 0f);
             buttonRect.sizeDelta = new Vector2(42f, 58f);
 
@@ -346,8 +346,7 @@ namespace GardenMerger.UI
             Vector2 target = _orderPanelExpandedPosition;
             if (!expanded)
             {
-                float visibleHandleWidth = _orderPanelToggleButton != null ? _orderPanelToggleButton.GetComponent<RectTransform>().rect.width : 42f;
-                target.x += Mathf.Max(0f, _orderPanelRect.rect.width - visibleHandleWidth);
+                target.x += _orderPanelRect.rect.width;
             }
 
             UpdateOrderPanelToggleIcon();
